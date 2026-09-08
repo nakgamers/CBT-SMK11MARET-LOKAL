@@ -1,0 +1,8 @@
+# Shell script & config container WAJIB LF — CRLF membuat shebang
+# `#!/bin/sh\r` tidak dikenali Linux dan build Railway gagal.
+* text=auto
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.conf text eol=lf
+.dockerignore text eol=lf
+Procfile text eol=lf

@@ -1,0 +1,19 @@
+# Jangan ikut ke image Docker.
+.env
+vendor/
+writable/cache/*
+writable/logs/*
+writable/session/*
+writable/uploads/*
+writable/debugbar/*
+tests/
+builds/
+node_modules/
+.git/
+*.md
+dev-*
+serve-cbt.sh
+tunnel-cbt.sh
+tj.jar
+phpunit.dist.xml
+docker-compose.yml
