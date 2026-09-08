@@ -32,20 +32,6 @@ class Auth extends BaseController
 
         $siswa = model(StudentModel::class)->findByCard($nis, $token);
 
-        // TEMP DIAG — hapus setelah selesai
-        $dbug = \Config\Database::connect();
-        $cNis  = (new \App\Models\StudentModel())->where('nis', $nis)->countAllResults();
-        $cTok  = (new \App\Models\StudentModel())->where('nis', $nis)->where('token', $token)->countAllResults();
-        $cAkt  = (new \App\Models\StudentModel())->where('nis', $nis)->where('token', $token)->where('aktif', 1)->countAllResults();
-        @file_put_contents(
-            WRITEPATH . 'dbg-attempt.log',
-            date('H:i:s') . " nis=[{$nis}] tok=[{$token}] found=" . ($siswa ? 'Y' : 'N')
-                . ' cNis=' . $cNis . ' cTok=' . $cTok . ' cAkt=' . $cAkt
-                . ' hex=' . bin2hex($nis) . '/' . bin2hex($token)
-                . ' db=' . $dbug->database . ' sql=' . (string) $dbug->getLastQuery() . "\n",
-            FILE_APPEND
-        );
-
         // fallback toleran titik: siswa mengetik "247411" padahal NIS "24.7411"
         if (! $siswa) {
             $nisL  = str_replace('.', '', $nis);
