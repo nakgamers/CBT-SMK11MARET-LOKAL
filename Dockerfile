@@ -22,12 +22,9 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 # php-fpm: pakai socket unix (dipakai nginx.conf) dan JANGAN bersihkan
 # environment — CI4 membaca kredensial DB dari variabel Railway di worker.
-# Catatan: image resmi php:fpm memakai `listen = 9000` (TCP), jadi pola
-# di bawah sengaja longgar agar cocok ke semua variasi default.
-RUN sed -i 's|^listen = .*|listen = /run/php/php-fpm.sock|' \
-      /usr/local/etc/php-fpm.d/www.conf \
- && sed -i 's|^;\?clear_env = .*|clear_env = no|' /usr/local/etc/php-fpm.d/www.conf \
- && mkdir -p /run/php
+# www.conf bawaan image DITIMPA total (sed terbukti rapuh lintas versi image).
+COPY docker/php-fpm-pool.conf /usr/local/etc/php-fpm.d/www.conf
+RUN mkdir -p /run/php
 
 # layer dependency dulu: ubah kode tidak memicu ulang composer install
 COPY composer.json composer.lock ./
