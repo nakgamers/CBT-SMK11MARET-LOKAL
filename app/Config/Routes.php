@@ -27,7 +27,7 @@ $routes->group('siswa', ['filter' => 'studentAuth'], static function ($routes): 
     // absen selfie
     $routes->get('absen/(:num)', 'Selfie::index/$1');
     $routes->post('absen/(:num)/upload', 'Selfie::upload/$1');   // AJAX
-    $routes->get('absen/(:num)/lihat/(:segment)', 'Selfie::lihat/$1/$2');
+    $routes->get('absen/(:num)/lihat/(:segment)', 'Selfie::lihat/$1/$2'); // nama file divalidasi ketat di controller
 });
 
 // ---------------------------------------------------------------- admin
