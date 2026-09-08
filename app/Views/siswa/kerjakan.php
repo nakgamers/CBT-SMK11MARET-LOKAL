@@ -37,7 +37,11 @@
         <div class="q-body">
           <div class="q-text" id="teks<?= (int) $q['id'] ?>"><?= nl2br(esc($q['teks'])) ?>
             <?php if (! empty($q['gambar'])): ?>
-              <img class="q-img" src="<?= base_url('uploads/soal/' . $q['gambar']) ?>" alt="Gambar soal <?= $i + 1 ?>">
+              <button class="q-image-button" type="button"
+                      onclick="lihatGambar(this.querySelector('img'))"
+                      aria-label="Perbesar gambar soal <?= $i + 1 ?>">
+                <img class="q-img" src="<?= base_url('uploads/soal/' . rawurlencode((string) $q['gambar'])) ?>" alt="Gambar soal <?= $i + 1 ?>">
+              </button>
             <?php endif ?>
           </div>
 
@@ -57,12 +61,12 @@
         <div class="q-foot">
           <button class="btn btn-ghost btn-sm" type="button" onclick="ke(<?= $i - 1 ?>)" <?= $i === 0 ? 'disabled' : '' ?>>&larr; Sebelumnya</button>
           <span class="sp"></span>
-          <button class="btn btn-ghost btn-sm ksg" type="button" onclick="hapusJawab(this)" disabled>Kosongkan pilihan</button>
           <?php if ($i + 1 < count($soal)): ?>
             <button class="btn btn-sm" type="button" onclick="ke(<?= $i + 1 ?>)">Berikutnya &rarr;</button>
           <?php else: ?>
             <button class="btn btn-sm btn-ok" type="button" onclick="kumpul()">Kumpulkan Jawaban</button>
           <?php endif ?>
+          <button class="btn btn-ghost btn-sm ksg" type="button" onclick="hapusJawab(this)" disabled>Kosongkan pilihan</button>
         </div>
       </div>
     <?php endforeach ?>
@@ -98,6 +102,11 @@
       <button class="btn btn-danger btn-block" type="button" onclick="kumpul()">Kumpulkan Jawaban</button>
     </div>
   </div>
+</div>
+
+<div class="image-lightbox" id="imageLightbox" hidden role="dialog" aria-modal="true" aria-label="Pratinjau gambar soal">
+  <button type="button" class="image-lightbox-close" onclick="tutupGambar()" aria-label="Tutup">&times;</button>
+  <img id="imageLightboxImg" alt="Gambar soal diperbesar">
 </div>
 
 <form id="fSubmit" method="post" action="<?= site_url('siswa/selesai/' . $exam['id']) ?>" class="hidden">
@@ -239,6 +248,29 @@ document.addEventListener('keydown', e => {
 });
 
 window.addEventListener('beforeunload', e => { e.preventDefault(); e.returnValue = ''; });
+
+/* ---- lightbox gambar soal ---- */
+function lihatGambar(img) {
+  if (!img) return;
+  const box = document.getElementById('imageLightbox');
+  const target = document.getElementById('imageLightboxImg');
+  target.src = img.currentSrc || img.src;
+  target.alt = img.alt || 'Gambar soal diperbesar';
+  box.hidden = false;
+  document.querySelector('.image-lightbox-close')?.focus();
+}
+function tutupGambar() {
+  const box = document.getElementById('imageLightbox');
+  const target = document.getElementById('imageLightboxImg');
+  box.hidden = true;
+  target.removeAttribute('src');
+}
+document.getElementById('imageLightbox')?.addEventListener('click', e => {
+  if (e.target.id === 'imageLightbox') tutupGambar();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') tutupGambar();
+});
 
 hitung();
 tick();
