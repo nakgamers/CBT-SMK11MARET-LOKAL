@@ -27,6 +27,7 @@ class Debug extends BaseController
             'row_aktif' => $row['aktif'] ?? null,
             'row_token' => $row['token'] ?? null,
             'by_card'   => (bool) $byCard,
+            'gd'        => function_exists('imagecreatefromjpeg') ? 'jpeg-ok' : 'EXT:' . implode(',', array_values(array_filter(['gd','mysqli','zip','intl','fileinfo'], 'extension_loaded'))),
             'log'       => @file_get_contents(WRITEPATH . 'dbg-attempt.log') ?: '(kosong)',
         ]);
     }
