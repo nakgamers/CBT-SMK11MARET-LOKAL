@@ -34,8 +34,8 @@ RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-in
 COPY . .
 
 RUN composer dump-autoload --optimize --no-dev \
- && mkdir -p writable/cache writable/logs writable/session writable/uploads \
- && chown -R www-data:www-data writable
+ && mkdir -p writable/cache writable/logs writable/session writable/uploads public/uploads/soal \
+ && chown -R www-data:www-data writable public/uploads/soal
 
 COPY docker/nginx.conf      /etc/nginx/sites-available/default
 COPY docker/supervisord.conf /etc/supervisor/conf.d/cbt.conf

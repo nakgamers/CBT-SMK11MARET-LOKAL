@@ -401,6 +401,16 @@ class CbtTest extends BaseCommand
             // -------------------------------------------------- H. status waktu
             CLI::newLine();
             CLI::write('H. Unit: ExamModel::statusWaktu & untukKelas', 'yellow');
+
+            // Regression: halaman selfie pertama (tanpa selfie tersimpan) tidak
+            // boleh melempar TypeError karena tombol Ambil Ulang belum dirender.
+            $selfieView = file_get_contents(APPPATH . 'Views/siswa/selfie.php');
+            $this->ok(
+                is_string($selfieView)
+                && str_contains($selfieView, "const btnUlang = document.getElementById('btnUlang');")
+                && str_contains($selfieView, "if (btnUlang) {"),
+                'Selfie tanpa foto tetap memasang handler Kirim (btnUlang null aman)'
+            );
             $now = strtotime('2026-06-15 10:00:00');
             $ex  = ['mulai_at' => '2026-06-15 09:00:00', 'selesai_at' => '2026-06-15 11:00:00', 'aktif' => 1];
             $this->ok(ExamModel::statusWaktu($ex, $now) === 'berlangsung', 'Di dalam rentang -> berlangsung');

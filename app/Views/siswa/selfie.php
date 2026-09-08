@@ -57,10 +57,14 @@
         btnKirim= document.getElementById('btnKirim'),
         area    = document.getElementById('areaKamera');
   let blob = null;
-  document.getElementById('btnUlang').addEventListener('click', () => {
-    area.hidden = false;
-    document.querySelector('.selfie-preview').hidden = true;
-  });
+  const btnUlang = document.getElementById('btnUlang');
+  if (btnUlang) {
+    btnUlang.addEventListener('click', () => {
+      area.hidden = false;
+      const savedPreview = document.querySelector('.selfie-preview');
+      if (savedPreview) savedPreview.hidden = true;
+    });
+  }
 
   // fallback: file dari galeri (sudah dikompres ulang via canvas juga)
   document.getElementById('fileAlt').addEventListener('change', function () {

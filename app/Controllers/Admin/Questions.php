@@ -47,21 +47,59 @@ class Questions extends BaseController
         }
 
         $gambar = $this->request->getFile('gambar');
-        if ($gambar && $gambar->isValid() && $gambar->getSize() > 0) {
-            if (! in_array(strtolower($gambar->getClientExtension()), ['jpg', 'jpeg', 'png', 'gif', 'webp'], true)) {
-                return redirect()->back()->with('error', 'Gambar harus jpg/png/gif/webp.')->withInput();
+        $gambarBaru = null;
+        $dir = rtrim(FCPATH, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'soal';
+
+        if ($gambar && $gambar->getError() !== UPLOAD_ERR_NO_FILE) {
+            if (! $gambar->isValid()) {
+                $pesan = match ($gambar->getError()) {
+                    UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'Ukuran gambar melebihi batas upload server.',
+                    UPLOAD_ERR_PARTIAL => 'Upload gambar tidak selesai. Coba pilih gambar lagi.',
+                    default => 'Gambar tidak dapat diupload (' . $gambar->getErrorString() . ').',
+                };
+                log_message('error', 'Upload gambar soal gagal: {m}', ['m' => $pesan]);
+                return redirect()->back()->with('error', $pesan)->withInput();
             }
-            $dir = FCPATH . 'uploads/soal';
-            if (! is_dir($dir)) {
-                mkdir($dir, 0777, true);
+
+            if ($gambar->getSize() > 8 * 1024 * 1024) {
+                return redirect()->back()->with('error', 'Ukuran gambar maksimal 8 MB.')->withInput();
             }
-            $data['gambar'] = $gambar->getRandomName();
-            $gambar->move($dir, $data['gambar']);
+
+            if (! in_array(strtolower((string) $gambar->getMimeType()), ['image/jpeg', 'image/png', 'image/gif', 'image/webp'], true)) {
+                return redirect()->back()->with('error', 'Format gambar harus JPG, PNG, GIF, atau WebP.')->withInput();
+            }
+
+            if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
+                log_message('error', 'Direktori gambar soal tidak dapat dibuat: {dir}', ['dir' => $dir]);
+                return redirect()->back()->with('error', 'Folder penyimpanan gambar belum siap.')->withInput();
+            }
+
+            if (! is_writable($dir)) {
+                log_message('error', 'Direktori gambar soal tidak writable: {dir}', ['dir' => $dir]);
+                return redirect()->back()->with('error', 'Penyimpanan gambar tidak memiliki izin tulis di server.')->withInput();
+            }
+
+            $gambarBaru = $gambar->getRandomName();
+            try {
+                $gambar->move($dir, $gambarBaru);
+            } catch (\Throwable $e) {
+                log_message('error', 'Move gambar soal gagal: {m}', ['m' => $e->getMessage()]);
+                return redirect()->back()->with('error', 'Gambar gagal disimpan ke server.')->withInput();
+            }
+            $data['gambar'] = $gambarBaru;
         }
 
+        $lama = $id ? $model->find($id) : null;
         $ok = $id ? $model->update($id, $data) : $model->insert($data);
         if ($ok === false) {
+            if ($gambarBaru !== null) {
+                @unlink($dir . DIRECTORY_SEPARATOR . $gambarBaru);
+            }
             return redirect()->back()->with('error', $model->errors())->withInput();
+        }
+
+        if ($gambarBaru !== null && ! empty($lama['gambar']) && $lama['gambar'] !== $gambarBaru) {
+            @unlink($dir . DIRECTORY_SEPARATOR . basename((string) $lama['gambar']));
         }
 
         return redirect()->to(site_url('admin/soal/' . $bankId))
