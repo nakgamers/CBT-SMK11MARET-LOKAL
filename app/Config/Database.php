@@ -199,6 +199,33 @@ class Database extends Config
         // we don't overwrite live data on accident.
         if (ENVIRONMENT === 'testing') {
             $this->defaultGroup = 'tests';
+
+            return;
+        }
+
+        // Kredensial DB dari environment (Railway/Docker). Nama variabel
+        // bertitik TIDAK selalu lolos menjadi environment variable di
+        // container, jadi kita dukung juga bentuk underscore yang pasti
+        // aman: DATABASE_HOSTNAME, DATABASE_USERNAME, DATABASE_PASSWORD,
+        // DATABASE_NAME, DATABASE_PORT.
+        $map = [
+            'hostname' => ['database.hostname', 'DATABASE_HOSTNAME'],
+            'username' => ['database.username', 'DATABASE_USERNAME'],
+            'password' => ['database.password', 'DATABASE_PASSWORD'],
+            'database' => ['database.database', 'DATABASE_NAME'],
+            'port'     => ['database.port', 'DATABASE_PORT'],
+        ];
+        foreach ($map as $key => $names) {
+            foreach ($names as $n) {
+                $v = getenv($n);
+                if ($v === false) {
+                    $v = $_ENV[$n] ?? $_SERVER[$n] ?? false;
+                }
+                if ($v !== false && $v !== '') {
+                    $this->default[$key] = $v;
+                    break;
+                }
+            }
         }
     }
 }
