@@ -13,7 +13,7 @@ class ExamModel extends Model
     protected $allowedFields = [
         'nama', 'bank_id', 'kelas', 'jumlah_soal', 'durasi_menit',
         'mulai_at', 'selesai_at', 'acak_soal', 'acak_opsi',
-        'tampilkan_hasil', 'token', 'aktif',
+        'tampilkan_hasil', 'absen_selfie', 'token', 'aktif',
     ];
 
     protected $validationRules = [

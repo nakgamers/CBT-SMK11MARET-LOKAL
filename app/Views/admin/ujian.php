@@ -121,6 +121,7 @@
           <label class="check"><input type="checkbox" name="acak_soal" id="e_acak_soal" value="1" checked> Acak urutan soal per siswa</label>
           <label class="check"><input type="checkbox" name="acak_opsi" id="e_acak_opsi" value="1"> Acak urutan opsi jawaban</label>
           <label class="check"><input type="checkbox" name="tampilkan_hasil" id="e_tampil" value="1" checked> Siswa boleh melihat nilainya sendiri setelah selesai</label>
+          <label class="check"><input type="checkbox" name="absen_selfie" id="e_selfie" value="1"> Wajib absen selfie sebelum mulai (anti-joki)</label>
           <label class="check"><input type="checkbox" name="aktif" id="e_aktif" value="1" checked> Ujian aktif</label>
         </div></div>
       </div>
@@ -155,6 +156,7 @@ function formUjian(e) {
   c('e_acak_soal', e ? Number(e.acak_soal) === 1 : true);
   c('e_acak_opsi', e ? Number(e.acak_opsi) === 1 : false);
   c('e_tampil', e ? Number(e.tampilkan_hasil) === 1 : true);
+  c('e_selfie', e ? Number(e.absen_selfie) === 1 : false);
   c('e_aktif', e ? Number(e.aktif) === 1 : true);
 
   /* isi centang kelas dari nilai tersimpan ("*" atau "XII RPL 1,XII RPL 2") */

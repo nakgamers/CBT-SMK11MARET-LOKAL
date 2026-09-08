@@ -27,6 +27,12 @@ class Exam extends BaseController
                 : 'siswa/kerjakan/' . $examId));
         }
 
+        // Absen selfie: wajib sebelum attempt dibuat (anti-joki).
+        if ((int) ($exam['absen_selfie'] ?? 0) === 1
+            && ! model(\App\Models\SelfieModel::class)->untukSiswa($examId, (int) $siswa['id'])) {
+            return redirect()->to(site_url('siswa/absen/' . $examId));
+        }
+
         $jumlah = count(model(QuestionModel::class)->idsUntukUjian(
             (int) $exam['bank_id'],
             (int) $exam['jumlah_soal'],
@@ -56,6 +62,11 @@ class Exam extends BaseController
 
         // Belum ada attempt: ini POST/GET pertama -> validasi token lalu buat.
         if (! $attempt) {
+            // gerbang kedua: akses langsung /kerjakan tanpa selfie ditolak
+            if ((int) ($exam['absen_selfie'] ?? 0) === 1
+                && ! model(\App\Models\SelfieModel::class)->untukSiswa($examId, (int) $siswa['id'])) {
+                return redirect()->to(site_url('siswa/absen/' . $examId));
+            }
             if (! empty($exam['token'])) {
                 $kirim = strtoupper(trim((string) $this->request->getGet('token')));
                 if ($kirim !== strtoupper((string) $exam['token'])) {

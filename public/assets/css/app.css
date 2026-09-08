@@ -703,3 +703,40 @@ ul.pagination li.disabled span { opacity: .45; }
   .exam-bar .save-pill { grid-column: 1; grid-row: 2; align-self: center; justify-self: start; }
   .exam-bar .btn { grid-column: 2; grid-row: 2; min-height: 38px; padding: .35rem .7rem; }
 }
+
+/* ============ Absen Selfie ============ */
+.selfie-card { max-width: 560px; margin: 0 auto; }
+.selfie-stage { position: relative; background: #0f172a; border-radius: 14px; overflow: hidden; aspect-ratio: 4/3; }
+.selfie-stage video { width: 100%; height: 100%; object-fit: cover; display: block; transform: scaleX(-1); }
+.selfie-hint { position: absolute; inset: 0; display: grid; place-items: center; color: #cbd5e1; font-size: .9rem; padding: 1rem; text-align: center; }
+.selfie-preview { margin-top: .8rem; }
+.selfie-preview img { width: 100%; max-width: 320px; border-radius: 12px; border: 1px solid var(--line); display: block; }
+.selfie-alt { margin-top: 1rem; font-size: .88rem; color: var(--ink-2); }
+.selfie-alt summary { cursor: pointer; }
+.selfie-alt input[type=file] { margin-top: .5rem; }
+
+.filter-row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin: .8rem 0 1rem; }
+.filter-row select, .filter-row input[type=date], .filter-row input[type=search] {
+  min-height: 38px; padding: .35rem .6rem; border: 1px solid var(--line); border-radius: 9px;
+  background: var(--card); color: var(--ink); font: inherit; font-size: .9rem;
+}
+.filter-row input[type=search] { flex: 1 1 160px; min-width: 140px; }
+
+.selfie-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: .8rem; }
+.selfie-cell { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.selfie-cell img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: #e2e8f0; }
+.selfie-cell figcaption { padding: .5rem .6rem; display: grid; gap: .1rem; font-size: .78rem; color: var(--ink-2); }
+.selfie-cell figcaption b { color: var(--ink); font-size: .84rem; }
+.selfie-cell { position: relative; }
+.selfie-del { position: absolute; top: .4rem; right: .4rem; margin: 0; }
+.selfie-del .btn { padding: .15rem .45rem; opacity: .85; }
+
+.pager { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: 1rem; }
+.pager a { padding: .35rem .7rem; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink-2); text-decoration: none; font-size: .88rem; }
+.pager a.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+
+.lightbox { position: fixed; inset: 0; background: rgba(2, 6, 23, .88); display: grid; place-items: center; z-index: 60; padding: 1rem; }
+.lightbox figure { margin: 0; max-width: min(92vw, 900px); text-align: center; }
+.lightbox img { max-width: 100%; max-height: 82vh; border-radius: 12px; }
+.lightbox figcaption { color: #e2e8f0; font-size: .88rem; margin-top: .6rem; }
+.lightbox .lb-x { position: absolute; top: .8rem; right: 1rem; background: transparent; border: 0; color: #fff; font-size: 2rem; line-height: 1; cursor: pointer; }

@@ -90,6 +90,7 @@ class Exams extends BaseController
             'acak_soal'       => $this->request->getPost('acak_soal') ? 1 : 0,
             'acak_opsi'       => $this->request->getPost('acak_opsi') ? 1 : 0,
             'tampilkan_hasil' => $this->request->getPost('tampilkan_hasil') ? 1 : 0,
+            'absen_selfie'    => $this->request->getPost('absen_selfie') ? 1 : 0,
             'token'           => strtoupper(trim((string) $this->request->getPost('token'))) ?: null,
             'aktif'           => $this->request->getPost('aktif') ? 1 : 0,
         ];

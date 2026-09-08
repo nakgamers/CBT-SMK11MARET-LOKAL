@@ -32,6 +32,7 @@
       <a href="<?= site_url('admin/bank') ?>" class="<?= in_array($seg, ['bank', 'soal'], true) ? 'on' : '' ?>">&#128218; Bank Soal</a>
       <div class="sep">Ujian</div>
       <a href="<?= site_url('admin/ujian') ?>" class="<?= $seg === 'ujian' ? 'on' : '' ?>">&#128221; Jadwal &amp; Hasil</a>
+      <a href="<?= site_url('admin/absen') ?>" class="<?= $seg === 'absen' ? 'on' : '' ?>">&#128247; Absen Selfie</a>
       <div class="sep">Akun</div>
       <a href="<?= site_url('admin/akun') ?>" class="<?= $seg === 'akun' ? 'on' : '' ?>">&#128273; Ganti Password</a>
     </nav>

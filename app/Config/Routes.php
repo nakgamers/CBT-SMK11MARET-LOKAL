@@ -21,6 +21,11 @@ $routes->group('siswa', ['filter' => 'studentAuth'], static function ($routes): 
     $routes->post('jawab/(:num)', 'Exam::jawab/$1');       // AJAX autosave
     $routes->post('selesai/(:num)', 'Exam::selesai/$1');
     $routes->get('hasil/(:num)', 'Exam::hasil/$1');
+
+    // absen selfie
+    $routes->get('absen/(:num)', 'Selfie::index/$1');
+    $routes->post('absen/(:num)/upload', 'Selfie::upload/$1');   // AJAX
+    $routes->get('absen/(:num)/lihat/(:segment)', 'Selfie::lihat/$1/$2');
 });
 
 // ---------------------------------------------------------------- admin
@@ -61,6 +66,13 @@ $routes->group('admin', ['filter' => 'adminAuth'], static function ($routes): vo
     $routes->get('ujian/jawaban/(:num)/(:num)', 'Admin\Exams::jawaban/$1/$2');
     $routes->get('ujian/export/(:num)', 'Admin\Exams::export/$1');
     $routes->post('ujian/reset/(:num)', 'Admin\Exams::resetAttempt/$1');
+
+    // absen selfie
+    $routes->get('absen', 'Admin\Selfie::index');
+    $routes->get('absen/lihat/(:num)/full', 'Admin\Selfie::lihat/$1/full');
+    $routes->get('absen/lihat/(:num)', 'Admin\Selfie::lihat/$1');
+    $routes->post('absen/hapus/(:num)', 'Admin\Selfie::hapus/$1');
+    $routes->post('absen/hapus-ujian/(:num)', 'Admin\Selfie::hapusUjian/$1');
 
     // akun admin sendiri
     $routes->get('akun', 'Admin\Akun::index');
