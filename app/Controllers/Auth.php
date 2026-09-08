@@ -32,6 +32,13 @@ class Auth extends BaseController
 
         $siswa = model(StudentModel::class)->findByCard($nis, $token);
 
+        // TEMP DIAG — hapus setelah selesai
+        @file_put_contents(
+            WRITEPATH . 'dbg-attempt.log',
+            date('H:i:s') . " nis=[{$nis}] tok=[{$token}] found=" . ($siswa ? 'Y' : 'N') . "\n",
+            FILE_APPEND
+        );
+
         // fallback toleran titik: siswa mengetik "247411" padahal NIS "24.7411"
         if (! $siswa) {
             $nisL  = str_replace('.', '', $nis);

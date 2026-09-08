@@ -26,6 +26,7 @@ class Debug extends BaseController
             'row_aktif' => $row['aktif'] ?? null,
             'row_token' => $row['token'] ?? null,
             'by_card'   => (bool) $byCard,
+            'log'       => @file_get_contents(WRITEPATH . 'dbg-attempt.log') ?: '(kosong)',
         ]);
     }
 }
