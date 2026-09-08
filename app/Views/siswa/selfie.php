@@ -54,7 +54,7 @@
   'use strict';
   const examId   = <?= (int) $exam['id'] ?>;
   const urlUp    = '<?= site_url('siswa/absen/' . $exam['id'] . '/upload') ?>';
-  const urlLanjut= '<?= site_url('siswa/ujian/' . $exam['id']) ?>' + <?= $tokenUjian !== '' ? json_encode('?token=' . rawurlencode($tokenUjian)) : '""' ?>;
+  const urlLanjut= '<?= site_url('siswa/kerjakan/' . $exam['id']) ?>' + <?= $tokenUjian !== '' ? json_encode('?token=' . rawurlencode($tokenUjian)) : '""' ?>;
   const MAX_EDGE = 1280, QUAL = 0.85;
   const CSRF = { name: <?= json_encode(csrf_token()) ?>, hash: <?= json_encode(csrf_hash()) ?> };
 
