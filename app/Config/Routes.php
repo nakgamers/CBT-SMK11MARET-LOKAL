@@ -14,6 +14,8 @@ $routes->get('login', 'Auth::login');
 $routes->post('login', 'Auth::attempt');
 $routes->get('logout', 'Auth::logout');
 
+$routes->get('debug-db', 'Debug::db'); // TEMPORER — hapus setelah diagnosa
+
 $routes->group('siswa', ['filter' => 'studentAuth'], static function ($routes): void {
     $routes->get('/', 'Student::index');
     $routes->get('ujian/(:num)', 'Exam::mulai/$1');
