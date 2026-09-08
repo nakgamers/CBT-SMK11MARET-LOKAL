@@ -11,6 +11,7 @@ FROM php:8.3-fpm-bookworm
 RUN apt-get update && apt-get install -y --no-install-recommends \
       nginx supervisor \
       libzip-dev libpng-dev libjpeg-dev libonig-dev libicu-dev \
+ && docker-php-ext-configure gd --with-jpeg \
  && docker-php-ext-install mysqli zip gd intl opcache \
  && rm -rf /var/lib/apt/lists/*
 
