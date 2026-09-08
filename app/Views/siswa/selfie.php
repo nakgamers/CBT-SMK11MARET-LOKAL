@@ -26,10 +26,11 @@
       <div class="selfie-stage">
         <video id="vid" autoplay playsinline muted></video>
         <canvas id="cv" hidden></canvas>
-        <div class="selfie-hint" id="hint">Menyalakan kamera…</div>
+        <div class="selfie-hint" id="hint">Tekan tombol kamera untuk memulai.</div>
       </div>
 
       <div class="btn-row" id="ctrlAwal">
+        <button class="btn" type="button" id="btnBuka">&#128247; Aktifkan Kamera</button>
         <button class="btn" type="button" id="btnSnap" disabled>&#128247; Ambil Foto</button>
       </div>
       <div class="btn-row" id="ctrlHasil" hidden>
@@ -53,7 +54,7 @@
   'use strict';
   const examId   = <?= (int) $exam['id'] ?>;
   const urlUp    = '<?= site_url('siswa/absen/' . $exam['id'] . '/upload') ?>';
-  const urlLanjut= '<?= site_url('siswa/ujian/' . $exam['id']) ?>';
+  const urlLanjut= '<?= site_url('siswa/ujian/' . $exam['id']) ?>' + <?= $tokenUjian !== '' ? json_encode('?token=' . rawurlencode($tokenUjian)) : '""' ?>;
   const MAX_EDGE = 1280, QUAL = 0.85;
   const CSRF = { name: <?= json_encode(csrf_token()) ?>, hash: <?= json_encode(csrf_hash()) ?> };
 
@@ -63,26 +64,46 @@
         prev= document.getElementById('prev'),
         prevImg = document.getElementById('prevImg'),
         statusTxt = document.getElementById('statusTxt'),
+        btnBuka = document.getElementById('btnBuka'),
         btnSnap = document.getElementById('btnSnap'),
         btnKirim= document.getElementById('btnKirim'),
         area    = document.getElementById('areaKamera');
   let stream = null, blob = null;
 
   async function bukaKamera() {
-    hint.hidden = false; hint.textContent = 'Menyalakan kamera…';
+    hint.hidden = false;
+    hint.textContent = 'Meminta izin kamera…';
+    btnBuka.disabled = true;
+    if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      hint.textContent = 'Kamera hanya tersedia melalui HTTPS. Gunakan unggah dari galeri HP.';
+      btnBuka.disabled = false;
+      return;
+    }
     try {
+      if (stream) stream.getTracks().forEach(t => t.stop());
       stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 960 } },
+        video: { facingMode: { ideal: 'user' }, width: { ideal: 1280 }, height: { ideal: 960 } },
         audio: false
       });
       vid.srcObject = stream;
-      vid.onloadedmetadata = () => { vid.play(); btnSnap.disabled = false; hint.hidden = true; };
+      await vid.play();
+      btnSnap.disabled = false;
+      btnBuka.textContent = 'Kamera Aktif';
+      hint.hidden = true;
     } catch (e) {
-      hint.textContent = 'Kamera tidak bisa dibuka (' + (e.name || 'error') +
-        '). Gunakan opsi unggah di bawah, atau izinkan akses kamera lalu muat ulang halaman.';
+      btnBuka.disabled = false;
       btnSnap.disabled = true;
+      document.querySelector('.selfie-alt').open = true;
+      const msg = e.name === 'NotAllowedError'
+        ? 'Izin kamera ditolak. Izinkan Kamera di pengaturan browser/HP, lalu tekan Aktifkan Kamera lagi.'
+        : e.name === 'NotFoundError'
+          ? 'Kamera tidak ditemukan di perangkat ini.'
+          : 'Kamera gagal dibuka (' + (e.name || 'error') + '). Gunakan unggah dari galeri HP.';
+      hint.textContent = msg;
     }
   }
+
+  btnBuka.addEventListener('click', bukaKamera);
 
   function resizeToBlob(cb) {
     const w = vid.videoWidth || 640, h = vid.videoHeight || 480;
@@ -143,20 +164,25 @@
     fd.append('selfie', blob, 'selfie.jpg');
     fd.append(CSRF.name, CSRF.hash);
     fetch(urlUp, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-      .then(r => r.json())
-      .then(d => {
-        if (d.ok) {
-          if (stream) stream.getTracks().forEach(t => t.stop());
-          statusTxt.textContent = 'Tersimpan (' + d.kb + ' KB). Melanjutkan…';
-          setTimeout(() => { location.href = urlLanjut; }, 600);
-        } else {
-          btnKirim.disabled = false; statusTxt.textContent = 'Gagal: ' + d.error;
+      .then(async r => {
+        const text = await r.text();
+        let d;
+        try { d = JSON.parse(text); } catch (_) {
+          throw new Error(r.status === 403 ? 'Sesi login sudah habis. Muat ulang halaman dan coba lagi.' : 'Respons server tidak valid (' + r.status + ').');
         }
+        if (!r.ok || !d.ok) throw new Error(d.error || 'Upload ditolak server.');
+        return d;
       })
-      .catch(() => { btnKirim.disabled = false; statusTxt.textContent = 'Jaringan terputus, coba lagi.'; });
+      .then(d => {
+        if (stream) stream.getTracks().forEach(t => t.stop());
+        statusTxt.textContent = 'Tersimpan (' + d.kb + ' KB). Melanjutkan…';
+        setTimeout(() => { location.href = urlLanjut; }, 600);
+      })
+      .catch(e => { btnKirim.disabled = false; statusTxt.textContent = 'Gagal: ' + e.message; });
   });
 
-  if (! <?= $sudah ? 'true' : 'false' ?>) bukaKamera();
+  // Jangan meminta kamera otomatis: iOS/Safari dan beberapa browser HP hanya
+  // menampilkan permission setelah ada klik pengguna.
 })();
 </script>
 

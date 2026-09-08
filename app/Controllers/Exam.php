@@ -30,7 +30,12 @@ class Exam extends BaseController
         // Absen selfie: wajib sebelum attempt dibuat (anti-joki).
         if ((int) ($exam['absen_selfie'] ?? 0) === 1
             && ! model(\App\Models\SelfieModel::class)->untukSiswa($examId, (int) $siswa['id'])) {
-            return redirect()->to(site_url('siswa/absen/' . $examId));
+            $token = trim((string) $this->request->getGet('token'));
+            $url = site_url('siswa/absen/' . $examId);
+            if ($token !== '') {
+                $url .= '?token=' . rawurlencode($token);
+            }
+            return redirect()->to($url);
         }
 
         $jumlah = count(model(QuestionModel::class)->idsUntukUjian(

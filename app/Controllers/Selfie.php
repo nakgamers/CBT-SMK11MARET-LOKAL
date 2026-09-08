@@ -47,6 +47,7 @@ class Selfie extends BaseController
             'siswa' => $siswa,
             'exam'  => $exam,
             'sudah' => $sudah,
+            'tokenUjian' => trim((string) $this->request->getGet('token')),
         ]);
     }
 
