@@ -34,12 +34,15 @@ class Auth extends BaseController
 
         // TEMP DIAG — hapus setelah selesai
         $dbug = \Config\Database::connect();
+        $cNis  = (new \App\Models\StudentModel())->where('nis', $nis)->countAllResults();
+        $cTok  = (new \App\Models\StudentModel())->where('nis', $nis)->where('token', $token)->countAllResults();
+        $cAkt  = (new \App\Models\StudentModel())->where('nis', $nis)->where('token', $token)->where('aktif', 1)->countAllResults();
         @file_put_contents(
             WRITEPATH . 'dbg-attempt.log',
             date('H:i:s') . " nis=[{$nis}] tok=[{$token}] found=" . ($siswa ? 'Y' : 'N')
-                . ' host=' . $dbug->hostname . ' db=' . $dbug->database
-                . ' err=' . json_encode($dbug->error())
-                . ' q=' . json_encode($dbug->getLastQuery()) . "\n",
+                . ' cNis=' . $cNis . ' cTok=' . $cTok . ' cAkt=' . $cAkt
+                . ' hex=' . bin2hex($nis) . '/' . bin2hex($token)
+                . ' db=' . $dbug->database . ' sql=' . (string) $dbug->getLastQuery() . "\n",
             FILE_APPEND
         );
 
