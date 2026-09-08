@@ -16,6 +16,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
+# image resmi php:fpm TIDAK membawa composer — ambil binary-nya dari
+# image composer resmi (build error Railway: "composer: not found").
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
 # php-fpm: pakai socket unix (dipakai nginx.conf) dan JANGAN bersihkan
 # environment — CI4 membaca kredensial DB dari variabel Railway di worker.
 # Catatan: image resmi php:fpm memakai `listen = 9000` (TCP), jadi pola
