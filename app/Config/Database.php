@@ -222,7 +222,8 @@ class Database extends Config
                     $v = $_ENV[$n] ?? $_SERVER[$n] ?? false;
                 }
                 if ($v !== false && $v !== '') {
-                    $this->default[$key] = $v;
+                    // port WAJIB int (mysqli real_connect menolak string)
+                    $this->default[$key] = ($key === 'port') ? (int) $v : $v;
                     break;
                 }
             }
