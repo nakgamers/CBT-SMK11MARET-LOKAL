@@ -23,28 +23,20 @@
         Ambil foto wajah Anda menghadap kamera di tempat terang. Foto ini menjadi bukti kehadiran Anda pada ujian ini.
       </div>
 
-      <div class="selfie-stage">
-        <video id="vid" autoplay playsinline muted></video>
-        <canvas id="cv" hidden></canvas>
-        <div class="selfie-hint" id="hint">Tekan tombol kamera untuk memulai.</div>
-      </div>
-
+      <canvas id="cv" hidden></canvas>
       <div class="btn-row" id="ctrlAwal">
-        <button class="btn" type="button" id="btnBuka">&#128247; Aktifkan Kamera</button>
-        <button class="btn" type="button" id="btnSnap" disabled>&#128247; Ambil Foto</button>
+        <label class="btn" for="fileAlt">&#128247; Ambil Foto Selfie</label>
       </div>
       <div class="btn-row" id="ctrlHasil" hidden>
         <button class="btn" type="button" id="btnKirim">Kirim &amp; Mulai Ujian</button>
-        <button class="btn btn-ghost" type="button" id="btnUlang2">Ambil Ulang</button>
+        <label class="btn btn-ghost" for="fileAlt">Ambil Ulang</label>
       </div>
 
       <div class="selfie-preview" id="prev" hidden><img id="prevImg" alt="Pratinjau foto"></div>
       <p class="muted small" id="statusTxt"></p>
 
-      <details class="selfie-alt">
-        <summary>Kamera tidak bisa dibuka? Unggah foto dari galeri HP</summary>
-        <input type="file" id="fileAlt" accept="image/jpeg,image/png,image/webp" capture="user">
-      </details>
+      <input type="file" id="fileAlt" accept="image/*" capture="user" hidden>
+      <p class="muted small">Tombol ini akan membuka kamera HP secara langsung. Foto tidak dikirim sebelum Anda menekan tombol kirim.</p>
     </div>
   </div>
 </div>
@@ -58,84 +50,16 @@
   const MAX_EDGE = 1280, QUAL = 0.85;
   const CSRF = { name: <?= json_encode(csrf_token()) ?>, hash: <?= json_encode(csrf_hash()) ?> };
 
-  const vid = document.getElementById('vid'),
-        cv  = document.getElementById('cv'),
-        hint= document.getElementById('hint'),
+  const cv  = document.getElementById('cv'),
         prev= document.getElementById('prev'),
         prevImg = document.getElementById('prevImg'),
         statusTxt = document.getElementById('statusTxt'),
-        btnBuka = document.getElementById('btnBuka'),
-        btnSnap = document.getElementById('btnSnap'),
         btnKirim= document.getElementById('btnKirim'),
         area    = document.getElementById('areaKamera');
-  let stream = null, blob = null;
-
-  async function bukaKamera() {
-    hint.hidden = false;
-    hint.textContent = 'Meminta izin kamera…';
-    btnBuka.disabled = true;
-    if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      hint.textContent = 'Kamera hanya tersedia melalui HTTPS. Gunakan unggah dari galeri HP.';
-      btnBuka.disabled = false;
-      return;
-    }
-    try {
-      if (stream) stream.getTracks().forEach(t => t.stop());
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'user' }, width: { ideal: 1280 }, height: { ideal: 960 } },
-        audio: false
-      });
-      vid.srcObject = stream;
-      await vid.play();
-      btnSnap.disabled = false;
-      btnBuka.textContent = 'Kamera Aktif';
-      hint.hidden = true;
-    } catch (e) {
-      btnBuka.disabled = false;
-      btnSnap.disabled = true;
-      document.querySelector('.selfie-alt').open = true;
-      const msg = e.name === 'NotAllowedError'
-        ? 'Izin kamera ditolak. Izinkan Kamera di pengaturan browser/HP, lalu tekan Aktifkan Kamera lagi.'
-        : e.name === 'NotFoundError'
-          ? 'Kamera tidak ditemukan di perangkat ini.'
-          : 'Kamera gagal dibuka (' + (e.name || 'error') + '). Gunakan unggah dari galeri HP.';
-      hint.textContent = msg;
-    }
-  }
-
-  btnBuka.addEventListener('click', bukaKamera);
-
-  function resizeToBlob(cb) {
-    const w = vid.videoWidth || 640, h = vid.videoHeight || 480;
-    const r = Math.min(1, MAX_EDGE / Math.max(w, h));
-    cv.width = Math.round(w * r); cv.height = Math.round(h * r);
-    cv.getContext('2d').drawImage(vid, 0, 0, cv.width, cv.height);
-    cv.toBlob(b => cb(b), 'image/jpeg', QUAL);
-  }
-
-  btnSnap.addEventListener('click', () => {
-    resizeToBlob(b => {
-      if (!b) { statusTxt.textContent = 'Gagal membuat gambar.'; return; }
-      blob = b;
-      prevImg.src = URL.createObjectURL(b);
-      prev.hidden = false;
-      document.getElementById('ctrlAwal').hidden = true;
-      document.getElementById('ctrlHasil').hidden = false;
-      statusTxt.textContent = 'Ukuran terkompres: ' + Math.round(b.size / 1024) + ' KB';
-    });
-  });
-
-  function resetAmbil() {
-    blob = null; prev.hidden = true;
-    document.getElementById('ctrlHasil').hidden = true;
-    document.getElementById('ctrlAwal').hidden = false;
-    statusTxt.textContent = '';
-  }
-  document.getElementById('btnUlang2').addEventListener('click', resetAmbil);
+  let blob = null;
   document.getElementById('btnUlang').addEventListener('click', () => {
     area.hidden = false;
     document.querySelector('.selfie-preview').hidden = true;
-    bukaKamera();
   });
 
   // fallback: file dari galeri (sudah dikompres ulang via canvas juga)
@@ -174,15 +98,12 @@
         return d;
       })
       .then(d => {
-        if (stream) stream.getTracks().forEach(t => t.stop());
         statusTxt.textContent = 'Tersimpan (' + d.kb + ' KB). Melanjutkan…';
         setTimeout(() => { location.href = urlLanjut; }, 600);
       })
       .catch(e => { btnKirim.disabled = false; statusTxt.textContent = 'Gagal: ' + e.message; });
   });
 
-  // Jangan meminta kamera otomatis: iOS/Safari dan beberapa browser HP hanya
-  // menampilkan permission setelah ada klik pengguna.
 })();
 </script>
 
