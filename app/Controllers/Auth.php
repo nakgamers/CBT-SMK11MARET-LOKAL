@@ -33,9 +33,13 @@ class Auth extends BaseController
         $siswa = model(StudentModel::class)->findByCard($nis, $token);
 
         // TEMP DIAG — hapus setelah selesai
+        $dbug = \Config\Database::connect();
         @file_put_contents(
             WRITEPATH . 'dbg-attempt.log',
-            date('H:i:s') . " nis=[{$nis}] tok=[{$token}] found=" . ($siswa ? 'Y' : 'N') . "\n",
+            date('H:i:s') . " nis=[{$nis}] tok=[{$token}] found=" . ($siswa ? 'Y' : 'N')
+                . ' host=' . $dbug->hostname . ' db=' . $dbug->database
+                . ' err=' . json_encode($dbug->error())
+                . ' q=' . json_encode($dbug->getLastQuery()) . "\n",
             FILE_APPEND
         );
 
