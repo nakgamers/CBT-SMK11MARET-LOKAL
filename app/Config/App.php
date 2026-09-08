@@ -30,6 +30,14 @@ class App extends BaseConfig
     {
         parent::__construct();
 
+        // Hosting publik: kunci URL lewat env APP_BASE_URL (nama tanpa titik
+        // karena variabel bertitik tidak selalu lolos ke env container).
+        $envBase = getenv('APP_BASE_URL');
+        if (is_string($envBase) && $envBase !== '') {
+            $this->baseURL = rtrim($envBase, '/') . '/';
+            return; // env publik menang, jangan dideteksi ulang dari host
+        }
+
         if (env('app.baseURL') || ! isset($_SERVER['HTTP_HOST'])) {
             return;
         }
