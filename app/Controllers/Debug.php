@@ -22,6 +22,7 @@ class Debug extends BaseController
             'env'       => ENVIRONMENT,
             'db'        => $db->database,
             'host'      => $db->hostname,
+            'pid'       => getmypid() . '@' . gethostname(),
             'total'     => $total,
             'row_aktif' => $row['aktif'] ?? null,
             'row_token' => $row['token'] ?? null,
