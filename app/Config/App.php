@@ -52,9 +52,21 @@ class App extends BaseConfig
          * kalau tidak, siapa pun bisa memalsukannya.
          */
         if (! $https) {
-            $proxyLokal = in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1'], true);
-            $proto      = strtolower(trim(explode(',', (string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''))[0]));
-            $https      = $proxyLokal && $proto === 'https';
+            $ip         = $_SERVER['REMOTE_ADDR'] ?? '';
+            $proxyLokal = in_array($ip, ['127.0.0.1', '::1'], true)
+                // Railway/ngrok meneruskan ke container lewat jaringan privat,
+                // jadi alamat pengirim bukan 127.0.0.1 melainkan range privat.
+                || str_starts_with($ip, '10.')
+                || str_starts_with($ip, '192.168.')
+                || str_starts_with($ip, '172.16.')
+                || str_starts_with($ip, '172.17.')
+                || str_starts_with($ip, '172.18.')
+                || str_starts_with($ip, '172.19.')
+                || str_starts_with($ip, '172.2')
+                || str_starts_with($ip, '172.30.')
+                || str_starts_with($ip, '172.31.');
+            $proto = strtolower(trim(explode(',', (string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''))[0]));
+            $https = $proxyLokal && $proto === 'https';
         }
 
         // /cbt/public/index.php -> /cbt/public/ ; /index.php -> /
