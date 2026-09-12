@@ -62,11 +62,27 @@ class Selfie extends BaseController
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
 
-        // nama file mengandung hash konten -> aman di-cache browser lama-lama
+        $path = $f['path'];
+        clearstatcache(true, $path);
+        if (! is_readable($path)) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
+
+        $body = file_get_contents($path);
+        if ($body === false) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
+
+        // Kirim sebagai image inline dengan panjang eksplisit. Ini mencegah
+        // browser/Reverse proxy menganggap endpoint foto penuh sebagai respons
+        // HTML kosong atau download yang rusak.
         return $this->response
             ->setContentType($f['mime'])
-            ->setCache(['max_age' => 86400, 'last_modified' => '@' . filemtime($f['path'])])
-            ->setBody(file_get_contents($f['path']));
+            ->setHeader('Content-Disposition', 'inline; filename="selfie-' . $id . '.jpg"')
+            ->setHeader('Content-Length', (string) strlen($body))
+            ->setHeader('X-Content-Type-Options', 'nosniff')
+            ->setCache(['max_age' => 86400, 'last_modified' => '@' . filemtime($path)])
+            ->setBody($body);
     }
 
     /** Hapus satu record + filenya. */

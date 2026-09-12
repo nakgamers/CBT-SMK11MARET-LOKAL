@@ -77,8 +77,16 @@
   const lb = document.getElementById('lb'), img = document.getElementById('lbImg'), cap = document.getElementById('lbCap');
   document.querySelectorAll('.selfie-open').forEach(a => a.addEventListener('click', e => {
     e.preventDefault();
-    img.src = a.dataset.full; cap.textContent = a.dataset.cap;
+    img.alt = 'Memuat foto absen penuh…';
+    img.src = '';
     lb.hidden = false; document.body.style.overflow = 'hidden';
+    img.onload = () => { img.alt = 'Foto absen penuh'; };
+    img.onerror = () => {
+      img.alt = 'Foto penuh gagal dimuat';
+      cap.textContent = a.dataset.cap + ' — foto penuh gagal dimuat';
+    };
+    img.src = a.dataset.full;
+    cap.textContent = a.dataset.cap;
   }));
   function tutup() { lb.hidden = true; img.src = ''; document.body.style.overflow = ''; }
   lb.querySelector('.lb-x').addEventListener('click', tutup);
