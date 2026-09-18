@@ -159,6 +159,51 @@ class Exam extends BaseController
         ]);
     }
 
+    /** Catat perpindahan tab/jendela dan reset jawaban sesuai kebijakan anti-cheat. */
+    public function pelanggaran(int $examId)
+    {
+        $siswa = $this->siswa();
+        if (! $siswa) {
+            return $this->response->setStatusCode(401)->setJSON([
+                'ok'    => false,
+                'login' => false,
+                'error' => 'Sesi tidak valid.',
+            ]);
+        }
+
+        $attempt = model(AttemptModel::class)->findAktif($examId, (int) $siswa['id']);
+        if (! $attempt || $attempt['status'] === 'selesai') {
+            return $this->response->setStatusCode(409)->setJSON([
+                'ok'    => false,
+                'selesai' => true,
+                'error' => 'Ujian sudah ditutup.',
+            ]);
+        }
+
+        $hasil = model(AttemptModel::class)->catatPelanggaran((int) $attempt['id']);
+        if ($hasil === null) {
+            return $this->response->setStatusCode(409)->setJSON([
+                'ok'      => false,
+                'selesai' => true,
+                'error'   => 'Ujian sudah ditutup.',
+            ]);
+        }
+
+        $pelanggaran = (int) $hasil['pelanggaran'];
+        $dihentikan  = (bool) $hasil['dihentikan'];
+        if ($dihentikan) {
+            session()->destroy();
+        }
+
+        return $this->response->setJSON([
+            'ok'          => true,
+            'pelanggaran' => $pelanggaran,
+            'maksimal'    => 3,
+            'dihentikan'  => $dihentikan,
+            'redirect'    => $dihentikan ? site_url('login') : null,
+        ]);
+    }
+
     public function selesai(int $examId)
     {
         $siswa = $this->siswa();

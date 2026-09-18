@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= esc($exam['nama']) ?> — <?= esc(cbt_app()) ?></title>
 <link rel="stylesheet" href="<?= base_url('assets/css/app.css') ?>">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
 
@@ -14,6 +16,7 @@
     <small><?= esc($siswa['nama']) ?> &middot; <?= esc($siswa['kelas']) ?></small>
   </div>
   <span id="saveState" class="save-pill">Tersimpan otomatis</span>
+  <span id="antiCheatState" class="save-pill cheat" role="status" aria-live="assertive" hidden></span>
   <div id="timer" role="timer" aria-live="off">--:--</div>
   <button class="btn btn-ghost btn-sm" type="button" onclick="kumpul()">Kumpulkan</button>
 </div>
@@ -115,10 +118,14 @@
 
 <script>
 const URL_JAWAB = <?= json_encode(site_url('siswa/jawab/' . $exam['id'])) ?>;
+const URL_PELANGGARAN = <?= json_encode(site_url('siswa/pelanggaran/' . $exam['id'])) ?>;
+const URL_LOGIN = <?= json_encode(site_url('login')) ?>;
 const CSRF = { name: <?= json_encode(csrf_token()) ?>, hash: <?= json_encode(csrf_hash()) ?> };
 const TOTAL = <?= count($soal) ?>;
 let sisa = <?= max(0, (int) $sisa) ?>;
 let cur = 0;
+let antiCheatMengirim = false;
+let submitDisengaja = false;
 
 const pages = [...document.querySelectorAll('.q-page')];
 const navBtn = [...document.querySelectorAll('#navGrid button')];
@@ -154,8 +161,17 @@ pages.forEach(p => {
 function tick() {
   if (sisa <= 0) {
     elTimer.textContent = '00:00';
-    alert('Waktu ujian habis. Jawaban Anda dikumpulkan otomatis.');
-    document.getElementById('fSubmit').submit();
+    Swal.fire({
+      icon: 'warning',
+      title: 'Waktu ujian habis',
+      text: 'Jawaban Anda akan dikumpulkan otomatis.',
+      confirmButtonText: 'Mengerti',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+    }).then(() => {
+      submitDisengaja = true;
+      document.getElementById('fSubmit').submit();
+    });
     return;
   }
   sisa--;
@@ -187,7 +203,17 @@ async function kirim(qid, jawaban, ragu) {
     });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) {
-      if (j.habis) { alert('Waktu ujian sudah habis.'); location.href = <?= json_encode(site_url('siswa/hasil/' . $exam['id'])) ?>; return; }
+      if (j.habis) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Waktu ujian habis',
+          text: 'Jawaban Anda akan dikumpulkan otomatis.',
+          confirmButtonText: 'Lihat hasil',
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+        }).then(() => { location.href = <?= json_encode(site_url('siswa/hasil/' . $exam['id'])) ?>; });
+        return;
+      }
       status(j.error || 'gagal menyimpan', 'bad');
       return;
     }
@@ -197,6 +223,72 @@ async function kirim(qid, jawaban, ragu) {
     status('koneksi terputus — jawaban belum tersimpan', 'bad');
   }
 }
+
+function resetJawabanLokal() {
+  pages.forEach(page => {
+    page.querySelectorAll('input[type=radio]').forEach(radio => { radio.checked = false; });
+    page.querySelectorAll('.opt').forEach(option => option.classList.remove('sel'));
+    page.querySelectorAll('.ragu-box').forEach(box => { box.checked = false; });
+    const kosongkan = page.querySelector('.ksg');
+    if (kosongkan) kosongkan.disabled = true;
+  });
+  navBtn.forEach(button => button.classList.remove('done', 'ragu'));
+  hitung();
+}
+
+async function laporPelanggaran() {
+  if (antiCheatMengirim || submitDisengaja) return;
+  antiCheatMengirim = true;
+  resetJawabanLokal();
+
+  const antiCheatState = document.getElementById('antiCheatState');
+  antiCheatState.hidden = false;
+  antiCheatState.textContent = 'Terdeteksi keluar dari tab — jawaban direset';
+  status('jawaban direset', 'bad');
+
+  const body = new FormData();
+  body.append(CSRF.name, CSRF.hash);
+  try {
+    const response = await fetch(URL_PELANGGARAN, {
+      method: 'POST',
+      body,
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      credentials: 'same-origin',
+      keepalive: true,
+    });
+    const hasil = await response.json().catch(() => ({}));
+    if (hasil.dihentikan || hasil.login === false) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Ujian dihentikan',
+        text: hasil.dihentikan
+          ? 'Terdeteksi curang 3 kali. Ujian dinyatakan selesai dan Anda akan keluar dari sistem.'
+          : 'Sesi Anda sudah berakhir.',
+        confirmButtonText: 'Kembali ke login',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+      }).then(() => window.location.replace(hasil.redirect || URL_LOGIN));
+      return;
+    }
+    if (response.ok && hasil.pelanggaran) {
+      antiCheatState.textContent = 'Terdeteksi curang ' + hasil.pelanggaran + '/3 — semua jawaban direset';
+    } else if (!response.ok) {
+      antiCheatState.textContent = 'Pelanggaran gagal dicatat. Hubungi pengawas.';
+    }
+  } catch (error) {
+    // Jangan menyatakan reset berhasil bila request ke server gagal.
+    antiCheatState.textContent = 'Pelanggaran belum tercatat — periksa koneksi';
+    status('gagal mencatat anti-cheat', 'bad');
+  } finally {
+    antiCheatMengirim = false;
+  }
+}
+
+/* Tab berpindah/ditutup: visibilitychange lebih terukur daripada blur, yang bisa terpicu
+ * oleh klik dialog browser, keyboard virtual, atau elemen UI lain. */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') laporPelanggaran();
+});
 
 /* pilih opsi */
 document.addEventListener('change', e => {
@@ -229,10 +321,27 @@ function hapusJawab(btn) {
 
 function kumpul() {
   const belum = TOTAL - navBtn.filter(b => b.classList.contains('done')).length;
-  const msg = belum > 0
-    ? 'Masih ada ' + belum + ' soal belum dijawab. Tetap kumpulkan sekarang?'
-    : 'Kumpulkan jawaban dan akhiri ujian?';
-  if (confirm(msg)) document.getElementById('fSubmit').submit();
+  const adaYangKosong = belum > 0;
+  const sisaText = adaYangKosong
+    ? 'Masih ada <b>' + belum + ' soal</b> yang belum dijawab.'
+    : 'Semua soal sudah dijawab.';
+
+  Swal.fire({
+    icon: adaYangKosong ? 'warning' : 'question',
+    title: 'Kumpulkan jawaban?',
+    html: sisaText + '<br><span style="font-size:.9rem;color:#64748b">Setelah dikumpulkan, jawaban tidak dapat diubah lagi.</span>',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, kumpulkan',
+    cancelButtonText: 'Kembali mengerjakan',
+    reverseButtons: true,
+    focusCancel: true,
+    allowOutsideClick: false,
+  }).then(result => {
+    if (result.isConfirmed) {
+      submitDisengaja = true;
+      document.getElementById('fSubmit').submit();
+    }
+  });
 }
 
 /* keyboard: 1-5 pilih opsi, panah pindah soal */

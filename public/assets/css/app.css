@@ -431,6 +431,8 @@ ul.pagination li.disabled span { opacity: .45; }
 .save-pill.ok { background: var(--ok); color: #fff; border-color: transparent; }
 .save-pill.bad { background: var(--bad); color: #fff; border-color: transparent; }
 .save-pill.bad::before { content: '! '; }
+.save-pill.cheat { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+.save-pill.cheat::before { content: '⚠ '; }
 
 .exam-layout { display: grid; grid-template-columns: 1fr 268px; gap: 1.5rem; padding: 1.25rem; align-items: start; max-width: 1240px; margin: 0 auto; }
 .q-card { background: #fff; border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); }
@@ -711,6 +713,7 @@ ul.pagination li.disabled span { opacity: .45; }
   .exam-bar .nm { grid-column: 1; font-size: .86rem; }
   .exam-bar #timer { grid-column: 2; grid-row: 1; font-size: 1.1rem; align-self: center; }
   .exam-bar .save-pill { grid-column: 1; grid-row: 2; align-self: center; justify-self: start; }
+  .exam-bar #antiCheatState { grid-column: 1 / -1; grid-row: 3; justify-self: stretch; text-align: center; }
   .exam-bar .btn { grid-column: 2; grid-row: 2; min-height: 38px; padding: .35rem .7rem; }
 }
 

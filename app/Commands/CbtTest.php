@@ -297,6 +297,11 @@ class CbtTest extends BaseCommand
                 'Buka lembar kerja setelah selesai -> dialihkan ke hasil (Location: ' . ($r['location'] ?: '-') . ')'
             );
 
+            // --------------------------------------------- E2. anti-cheat
+            CLI::newLine();
+            CLI::write('E2. Anti-cheat', 'yellow');
+            $this->ujiAntiCheat($examId, $ids['bank'], $ids['soal'][0]);
+
             // ------------------------------------------------ F. auto submit
             CLI::newLine();
             CLI::write('F. Waktu habis = auto-submit', 'yellow');
@@ -446,6 +451,55 @@ class CbtTest extends BaseCommand
     }
 
     // ------------------------------------------------------------------ util
+
+    /** Verifikasi aturan anti-cheat pada database nyata dengan fixture yang selalu dibersihkan. */
+    private function ujiAntiCheat(int $examId, int $bankId, int $questionId): void
+    {
+        $db = db_connect();
+        $studentId = null;
+        $attemptId = null;
+        try {
+            $studentId = (int) model(StudentModel::class)->insert([
+                'nis' => '__ANTICHEAT_' . random_int(1000, 9999),
+                'nama' => 'Siswa Uji Anti Cheat',
+                'kelas' => '__TESTKLS__',
+                'jk' => 'L',
+                'token' => StudentModel::generateToken(),
+                'aktif' => 1,
+            ], true);
+            $attemptId = (int) model(AttemptModel::class)->insert([
+                'exam_id' => $examId,
+                'student_id' => $studentId,
+                'urutan' => json_encode([$questionId]),
+                'started_at' => date('Y-m-d H:i:s'),
+                'deadline_at' => date('Y-m-d H:i:s', time() + 3600),
+                'status' => 'berlangsung',
+                'ip' => '127.0.0.1',
+            ], true);
+
+            $answers = model(AnswerModel::class);
+            $attempts = model(AttemptModel::class);
+            $answers->simpan($attemptId, $questionId, 'A');
+            $first = $attempts->catatPelanggaran($attemptId);
+            $this->ok($first !== null && $first['pelanggaran'] === 1 && ! $first['dihentikan'], 'Pelanggaran pertama tercatat 1/3');
+            $this->ok($answers->petaAttempt($attemptId) === [], 'Pelanggaran pertama menghapus semua jawaban');
+
+            $second = $attempts->catatPelanggaran($attemptId);
+            $this->ok($second !== null && $second['pelanggaran'] === 2 && ! $second['dihentikan'], 'Pelanggaran kedua tercatat 2/3');
+            $third = $attempts->catatPelanggaran($attemptId);
+            $final = $attempts->find($attemptId);
+            $this->ok($third !== null && $third['pelanggaran'] === 3 && $third['dihentikan'], 'Pelanggaran ketiga menghentikan ujian');
+            $this->ok($final['status'] === 'selesai' && $answers->petaAttempt($attemptId) === [], 'Pelanggaran ketiga finalisasi dengan jawaban kosong');
+        } finally {
+            if ($attemptId) {
+                $db->table('answers')->where('attempt_id', $attemptId)->delete();
+                $db->table('attempts')->where('id', $attemptId)->delete();
+            }
+            if ($studentId) {
+                $db->table('students')->where('id', $studentId)->delete();
+            }
+        }
+    }
 
     /**
      * Buat xlsx sungguhan lalu unggah lewat form import (siswa & soal),

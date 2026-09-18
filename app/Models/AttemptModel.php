@@ -13,6 +13,7 @@ class AttemptModel extends Model
     protected $allowedFields = [
         'exam_id', 'student_id', 'urutan', 'started_at', 'deadline_at',
         'submitted_at', 'status', 'skor', 'benar', 'salah', 'kosong', 'ip',
+        'pelanggaran_cheat', 'pelanggaran_terakhir_at',
     ];
 
     public function findAktif(int $examId, int $studentId): ?array
@@ -47,6 +48,48 @@ class AttemptModel extends Model
     public function urutanIds(array $attempt): array
     {
         return array_map('intval', json_decode((string) $attempt['urutan'], true) ?: []);
+    }
+
+    /**
+     * Catat siswa meninggalkan halaman ujian dan kosongkan seluruh jawabannya.
+     * Pada pelanggaran ketiga attempt langsung difinalisasi dengan jawaban kosong.
+     *
+     * @return array{attempt: array, pelanggaran: int, dihentikan: bool}|null
+     */
+    public function catatPelanggaran(int $attemptId): ?array
+    {
+        $this->db->transStart();
+
+        // Kunci baris attempt agar dua visibility event bersamaan tidak kehilangan hitungan.
+        $attempt = $this->db->query(
+            'SELECT * FROM attempts WHERE id = ? FOR UPDATE',
+            [$attemptId]
+        )->getRowArray();
+        if (! $attempt || $attempt['status'] !== 'berlangsung') {
+            $this->db->transComplete();
+
+            return null;
+        }
+
+        $pelanggaran = min(3, (int) ($attempt['pelanggaran_cheat'] ?? 0) + 1);
+        $this->db->table('answers')->where('attempt_id', $attemptId)->delete();
+        $this->update($attemptId, [
+            'pelanggaran_cheat'       => $pelanggaran,
+            'pelanggaran_terakhir_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $dihentikan = $pelanggaran >= 3;
+        if ($dihentikan) {
+            $this->finalisasi($attemptId);
+        }
+
+        $this->db->transComplete();
+
+        return [
+            'attempt'     => $this->find($attemptId),
+            'pelanggaran' => $pelanggaran,
+            'dihentikan'  => $dihentikan,
+        ];
     }
 
     /**

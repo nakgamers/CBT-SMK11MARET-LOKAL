@@ -79,7 +79,15 @@ class AnswerModel extends Model
         return $out;
     }
 
-    /** Simpan/ubah 1 jawaban (autosave). */
+    /** Hapus semua jawaban yang tersimpan untuk attempt. */
+    public function hapusUntukAttempt(int $attemptId): void
+    {
+        $this->where('attempt_id', $attemptId)->delete();
+    }
+
+    /**
+     * Simpan/ubah 1 jawaban (autosave).
+     */
     public function simpan(int $attemptId, int $questionId, ?string $jawaban, ?bool $ragu = null): void
     {
         $row  = $this->where('attempt_id', $attemptId)->where('question_id', $questionId)->first();
