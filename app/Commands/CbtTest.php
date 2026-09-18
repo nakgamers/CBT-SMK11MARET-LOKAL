@@ -301,6 +301,7 @@ class CbtTest extends BaseCommand
             CLI::newLine();
             CLI::write('E2. Anti-cheat', 'yellow');
             $this->ujiAntiCheat($examId, $ids['bank'], $ids['soal'][0]);
+            $this->ujiGangguanKoneksi($examId, $ids['soal'][0]);
 
             // ------------------------------------------------ F. auto submit
             CLI::newLine();
@@ -498,6 +499,43 @@ class CbtTest extends BaseCommand
             if ($studentId) {
                 $db->table('students')->where('id', $studentId)->delete();
             }
+        }
+    }
+
+    /** Verifikasi lima gangguan koneksi: jawaban tetap ada hingga attempt selesai. */
+    private function ujiGangguanKoneksi(int $examId, int $questionId): void
+    {
+        $db = db_connect();
+        $studentId = null;
+        $attemptId = null;
+        try {
+            $studentId = (int) model(StudentModel::class)->insert([
+                'nis' => '__CONNECTION_' . random_int(1000, 9999), 'nama' => 'Siswa Uji Koneksi',
+                'kelas' => '__TESTKLS__', 'jk' => 'L', 'token' => StudentModel::generateToken(), 'aktif' => 1,
+            ], true);
+            $attemptId = (int) model(AttemptModel::class)->insert([
+                'exam_id' => $examId, 'student_id' => $studentId, 'urutan' => json_encode([$questionId]),
+                'started_at' => date('Y-m-d H:i:s'), 'deadline_at' => date('Y-m-d H:i:s', time() + 3600),
+                'status' => 'berlangsung', 'ip' => '127.0.0.1',
+            ], true);
+            $answers = model(AnswerModel::class);
+            $attempts = model(AttemptModel::class);
+            $answers->simpan($attemptId, $questionId, 'A');
+            for ($i = 1; $i <= 4; $i++) {
+                $hasil = $attempts->catatGangguanKoneksi($attemptId);
+                $this->ok($hasil !== null && $hasil['gangguan'] === $i && ! $hasil['dihentikan'], "Gangguan koneksi {$i}/5 tercatat");
+            }
+            $this->ok($answers->petaAttempt($attemptId) !== [], 'Gangguan koneksi tidak menghapus jawaban tersimpan');
+            $hasil = $attempts->catatGangguanKoneksi($attemptId);
+            $final = $attempts->find($attemptId);
+            $this->ok($hasil !== null && $hasil['gangguan'] === 5 && $hasil['dihentikan'], 'Gangguan koneksi kelima menghentikan ujian');
+            $this->ok($final['status'] === 'selesai', 'Gangguan koneksi kelima memfinalisasi attempt');
+        } finally {
+            if ($attemptId) {
+                $db->table('answers')->where('attempt_id', $attemptId)->delete();
+                $db->table('attempts')->where('id', $attemptId)->delete();
+            }
+            if ($studentId) $db->table('students')->where('id', $studentId)->delete();
         }
     }
 

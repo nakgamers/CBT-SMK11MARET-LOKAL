@@ -20,6 +20,7 @@ $routes->group('siswa', ['filter' => 'studentAuth'], static function ($routes): 
     $routes->get('kerjakan/(:num)', 'Exam::kerjakan/$1');
     $routes->post('jawab/(:num)', 'Exam::jawab/$1');       // AJAX autosave
     $routes->post('pelanggaran/(:num)', 'Exam::pelanggaran/$1'); // anti-cheat visibility
+    $routes->post('gangguan-koneksi/(:num)', 'Exam::gangguanKoneksi/$1'); // koneksi
     $routes->post('selesai/(:num)', 'Exam::selesai/$1');
     $routes->get('hasil/(:num)', 'Exam::hasil/$1');
 

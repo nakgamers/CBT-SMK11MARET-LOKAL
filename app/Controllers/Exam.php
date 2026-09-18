@@ -204,6 +204,45 @@ class Exam extends BaseController
         ]);
     }
 
+    /** Catat gangguan koneksi; jawaban tersimpan tidak dihapus. */
+    public function gangguanKoneksi(int $examId)
+    {
+        $siswa = $this->siswa();
+        if (! $siswa) {
+            return $this->response->setStatusCode(401)->setJSON([
+                'ok' => false, 'login' => false, 'error' => 'Sesi tidak valid.',
+            ]);
+        }
+
+        $attempt = model(AttemptModel::class)->findAktif($examId, (int) $siswa['id']);
+        if (! $attempt || $attempt['status'] === 'selesai') {
+            return $this->response->setStatusCode(409)->setJSON([
+                'ok' => false, 'selesai' => true, 'error' => 'Ujian sudah ditutup.',
+            ]);
+        }
+
+        $hasil = model(AttemptModel::class)->catatGangguanKoneksi((int) $attempt['id']);
+        if ($hasil === null) {
+            return $this->response->setStatusCode(409)->setJSON([
+                'ok' => false, 'selesai' => true, 'error' => 'Ujian sudah ditutup.',
+            ]);
+        }
+
+        $gangguan = (int) $hasil['gangguan'];
+        $dihentikan = (bool) $hasil['dihentikan'];
+        if ($dihentikan) {
+            session()->destroy();
+        }
+
+        return $this->response->setJSON([
+            'ok' => true,
+            'gangguan' => $gangguan,
+            'maksimal' => 5,
+            'dihentikan' => $dihentikan,
+            'redirect' => $dihentikan ? site_url('login') : null,
+        ]);
+    }
+
     public function selesai(int $examId)
     {
         $siswa = $this->siswa();
@@ -252,7 +291,7 @@ class Exam extends BaseController
          */
         if ((int) $exam['tampilkan_hasil'] !== 1) {
             return redirect()->to(site_url('siswa'))
-                ->with('info', 'Nilai ujian ini akan diumumkan oleh pengawas.');
+                ->with('info', 'Jawaban Anda sudah dikumpulkan dan disimpan.');
         }
 
         return view('siswa/hasil', [

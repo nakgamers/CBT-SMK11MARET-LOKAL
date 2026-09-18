@@ -14,6 +14,7 @@ class AttemptModel extends Model
         'exam_id', 'student_id', 'urutan', 'started_at', 'deadline_at',
         'submitted_at', 'status', 'skor', 'benar', 'salah', 'kosong', 'ip',
         'pelanggaran_cheat', 'pelanggaran_terakhir_at',
+        'gangguan_koneksi', 'gangguan_koneksi_terakhir_at',
     ];
 
     public function findAktif(int $examId, int $studentId): ?array
@@ -89,6 +90,45 @@ class AttemptModel extends Model
             'attempt'     => $this->find($attemptId),
             'pelanggaran' => $pelanggaran,
             'dihentikan'  => $dihentikan,
+        ];
+    }
+
+    /**
+     * Catat gangguan koneksi tanpa menghapus jawaban yang sudah tersimpan.
+     * Pada gangguan kelima attempt langsung difinalisasi.
+     *
+     * @return array{attempt: array, gangguan: int, dihentikan: bool}|null
+     */
+    public function catatGangguanKoneksi(int $attemptId): ?array
+    {
+        $this->db->transStart();
+        $attempt = $this->db->query(
+            'SELECT * FROM attempts WHERE id = ? FOR UPDATE',
+            [$attemptId]
+        )->getRowArray();
+        if (! $attempt || $attempt['status'] !== 'berlangsung') {
+            $this->db->transComplete();
+
+            return null;
+        }
+
+        $gangguan = min(5, (int) ($attempt['gangguan_koneksi'] ?? 0) + 1);
+        $this->update($attemptId, [
+            'gangguan_koneksi'            => $gangguan,
+            'gangguan_koneksi_terakhir_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $dihentikan = $gangguan >= 5;
+        if ($dihentikan) {
+            $this->finalisasi($attemptId);
+        }
+
+        $this->db->transComplete();
+
+        return [
+            'attempt'  => $this->find($attemptId),
+            'gangguan' => $gangguan,
+            'dihentikan' => $dihentikan,
         ];
     }
 

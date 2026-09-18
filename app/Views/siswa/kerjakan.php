@@ -119,12 +119,16 @@
 <script>
 const URL_JAWAB = <?= json_encode(site_url('siswa/jawab/' . $exam['id'])) ?>;
 const URL_PELANGGARAN = <?= json_encode(site_url('siswa/pelanggaran/' . $exam['id'])) ?>;
+const URL_GANGGUAN_KONEKSI = <?= json_encode(site_url('siswa/gangguan-koneksi/' . $exam['id'])) ?>;
 const URL_LOGIN = <?= json_encode(site_url('login')) ?>;
 const CSRF = { name: <?= json_encode(csrf_token()) ?>, hash: <?= json_encode(csrf_hash()) ?> };
 const TOTAL = <?= count($soal) ?>;
 let sisa = <?= max(0, (int) $sisa) ?>;
 let cur = 0;
 let antiCheatMengirim = false;
+let gangguanMengirim = false;
+let koneksiTerputus = false;
+let gangguanPending = Number(sessionStorage.getItem('cbt_gangguan_pending') || 0);
 let submitDisengaja = false;
 
 const pages = [...document.querySelectorAll('.q-page')];
@@ -220,7 +224,7 @@ async function kirim(qid, jawaban, ragu) {
     if (typeof j.sisa === 'number') sisa = j.sisa;   // sinkron ulang dengan server
     status('tersimpan ✓', 'ok');
   } catch (e) {
-    status('koneksi terputus — jawaban belum tersimpan', 'bad');
+    tampilkanHasilAutosaveGagal();
   }
 }
 
@@ -289,6 +293,72 @@ async function laporPelanggaran() {
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') laporPelanggaran();
 });
+
+function antreGangguanKoneksi() {
+  gangguanPending++;
+  sessionStorage.setItem('cbt_gangguan_pending', String(gangguanPending));
+}
+
+async function kirimGangguanKeServer() {
+  if (gangguanMengirim || submitDisengaja || !navigator.onLine) return;
+  gangguanMengirim = true;
+  try {
+    while (gangguanPending > 0 && !submitDisengaja) {
+      const body = new FormData();
+      body.append(CSRF.name, CSRF.hash);
+      const response = await fetch(URL_GANGGUAN_KONEKSI, {
+        method: 'POST', body,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        credentials: 'same-origin',
+        keepalive: true,
+      });
+      const hasil = await response.json().catch(() => ({}));
+      if (hasil.dihentikan || hasil.login === false) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Ujian dihentikan',
+          text: hasil.dihentikan
+            ? 'Koneksi terputus 5 kali. Ujian dinyatakan selesai dan Anda akan keluar dari sistem.'
+            : 'Sesi Anda sudah berakhir.',
+          confirmButtonText: 'Kembali ke login',
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+        }).then(() => window.location.replace(hasil.redirect || URL_LOGIN));
+        return;
+      }
+      if (!response.ok || !hasil.gangguan) throw new Error('Gagal mencatat gangguan koneksi');
+      gangguanPending--;
+      sessionStorage.setItem('cbt_gangguan_pending', String(gangguanPending));
+      status('gangguan koneksi ' + hasil.gangguan + '/5', 'bad');
+    }
+  } catch (error) {
+    status('koneksi terputus — menunggu koneksi kembali', 'bad');
+  } finally {
+    gangguanMengirim = false;
+  }
+}
+
+function laporGangguanKoneksi() {
+  if (gangguanMengirim || submitDisengaja) return;
+  antreGangguanKoneksi();
+  status('koneksi terputus — melaporkan…', 'bad');
+  kirimGangguanKeServer();
+}
+
+function tampilkanHasilAutosaveGagal() {
+  laporGangguanKoneksi();
+}
+
+window.addEventListener('offline', () => {
+  koneksiTerputus = true;
+  laporGangguanKoneksi();
+});
+window.addEventListener('online', () => {
+  koneksiTerputus = false;
+  status('koneksi kembali — menyinkronkan…', 'ok');
+  kirimGangguanKeServer();
+});
+if (gangguanPending > 0 && navigator.onLine) kirimGangguanKeServer();
 
 /* pilih opsi */
 document.addEventListener('change', e => {
