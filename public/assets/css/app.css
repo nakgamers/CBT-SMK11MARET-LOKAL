@@ -433,6 +433,15 @@ ul.pagination li.disabled span { opacity: .45; }
 .save-pill.bad::before { content: '! '; }
 .save-pill.cheat { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
 .save-pill.cheat::before { content: '⚠ '; }
+.exam-bar #antiCheatState {
+  flex: 1 1 100%;
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+.swal2-container { z-index: 9999 !important; }
 
 .exam-layout { display: grid; grid-template-columns: 1fr 268px; gap: 1.5rem; padding: 1.25rem; align-items: start; max-width: 1240px; margin: 0 auto; }
 .q-card { background: #fff; border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); }
