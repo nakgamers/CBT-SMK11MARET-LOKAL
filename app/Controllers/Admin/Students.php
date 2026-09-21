@@ -76,7 +76,7 @@ class Students extends BaseController
         }
         model(StudentModel::class)->update($id, ['token' => $siswa['nis']]);
 
-        return redirect()->back()->with('success', 'Token disamakan dengan NIS: ' . $siswa['nis']);
+        return redirect()->back()->with('success', 'Password disamakan dengan NIS: ' . $siswa['nis']);
     }
 
     public function template()

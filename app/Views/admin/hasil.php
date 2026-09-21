@@ -91,7 +91,7 @@
     <div class="card-head"><h2>Belum Mengerjakan</h2><span class="small dim"><?= count($absen) ?> siswa</span></div>
     <div class="table-wrap">
       <table class="tbl">
-        <thead><tr><th>NIS</th><th>Nama</th><th>Kelas</th><th>Token Kartu</th></tr></thead>
+        <thead><tr><th>NIS</th><th>Nama</th><th>Kelas</th><th>Password Kartu</th></tr></thead>
         <tbody>
         <?php foreach ($absen as $s): ?>
           <tr>

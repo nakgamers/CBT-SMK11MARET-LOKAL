@@ -1,0 +1,55 @@
+services:
+  cbt:
+    build: .
+    image: cbt-smk11maret:latest
+    container_name: cbt-app
+    restart: unless-stopped
+    depends_on:
+      cbt-mysql:
+        condition: service_healthy
+    networks:
+      - cbt-net
+    ports:
+      - "127.0.0.1:8086:8080"
+    environment:
+      CI_ENVIRONMENT: production
+      TZ: Asia/Jakarta
+    volumes:
+      - ./.env:/app/.env:ro
+      - ./writable/uploads:/app/writable/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/login || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  cbt-mysql:
+    image: mysql:8.0
+    container_name: cbt-mysql
+    restart: unless-stopped
+    networks:
+      - cbt-net
+    environment:
+      MYSQL_ROOT_PASSWORD: cbt_root_r4h4s14
+      MYSQL_DATABASE: cbt
+      MYSQL_USER: cbt
+      MYSQL_PASSWORD: cbt_r4h4s14
+      TZ: Asia/Jakarta
+    ports:
+      - "127.0.0.1:3316:3306"
+    volumes:
+      - cbt-mysql:/var/lib/mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "--silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+networks:
+  cbt-net:
+    driver: bridge
+
+volumes:
+  cbt-mysql:

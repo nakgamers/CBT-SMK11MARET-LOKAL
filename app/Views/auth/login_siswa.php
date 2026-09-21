@@ -8,9 +8,9 @@
     <input type="text" id="nis" name="nis" value="<?= esc(old('nis')) ?>" placeholder="Nomor Induk Siswa" required autofocus>
   </div>
   <div class="field">
-    <label for="token">Token</label>
+    <label for="token">Password</label>
     <input type="text" id="token" name="token" placeholder="Sama dengan NIS" required maxlength="30" autocomplete="off">
-    <div class="hint">Token login sama dengan NIS kamu.</div>
+    <div class="hint">Password login sama dengan NIS kamu.</div>
   </div>
   <button class="btn btn-block" type="submit">Masuk Ujian</button>
 </form>

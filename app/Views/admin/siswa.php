@@ -5,7 +5,7 @@
 <div class="page-head">
   <div>
     <h1>Siswa &amp; Kartu Login</h1>
-    <p class="muted mb0">Kartu berisi NIS + token; token dipakai siswa untuk login.</p>
+    <p class="muted mb0">Kartu berisi NIS + password; password dipakai siswa untuk login.</p>
   </div>
   <div class="btn-row">
     <a class="btn btn-ghost btn-sm" href="<?= site_url('admin/siswa/template') ?>">&#11015; Template Excel</a>
@@ -39,7 +39,7 @@
     <div class="table-wrap">
       <table class="tbl">
         <thead><tr>
-          <th>NIS</th><th>Nama</th><th>Kelas</th><th class="center">JK</th><th>Token</th><th class="center">Status</th><th class="act"><span class="sr-only">Aksi</span></th>
+          <th>NIS</th><th>Nama</th><th>Kelas</th><th class="center">JK</th><th>Password</th><th class="center">Status</th><th class="act"><span class="sr-only">Aksi</span></th>
         </tr></thead>
         <tbody>
         <?php foreach ($siswa as $s): ?>
@@ -59,9 +59,9 @@
             <td class="act">
               <button class="btn btn-ghost btn-sm" onclick='formSiswa(<?= json_encode($s, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'>Edit</button>
               <form method="post" action="<?= site_url('admin/siswa/reset-token/' . $s['id']) ?>" style="display:inline"
-                    data-confirm="Buat token baru? Kartu lama tidak bisa dipakai lagi.">
+                    data-confirm="Buat password baru? Kartu lama tidak bisa dipakai lagi.">
                 <?= csrf_field() ?>
-                <button class="btn btn-ghost btn-sm" type="submit">Token</button>
+                <button class="btn btn-ghost btn-sm" type="submit">Password</button>
               </form>
               <form method="post" action="<?= site_url('admin/siswa/hapus/' . $s['id']) ?>" style="display:inline"
                     data-confirm="Hapus <?= esc($s['nama'], 'attr') ?> beserta riwayat ujiannya?">
@@ -97,7 +97,7 @@
           <div class="field"><label for="s_jk">Jenis Kelamin</label>
             <select id="s_jk" name="jk"><option value="L">Laki-laki</option><option value="P">Perempuan</option></select>
           </div>
-          <div class="field"><label for="s_token">Token Kartu</label>
+          <div class="field"><label for="s_token">Password Kartu</label>
             <input type="text" id="s_token" name="token" maxlength="12" placeholder="otomatis bila kosong" style="text-transform:uppercase">
           </div>
         </div>
@@ -120,7 +120,7 @@
       <div class="modal-body">
         <div class="alert alert-info">
           Kolom wajib berurutan: <b>nis, nama, kelas, jk</b> (baris pertama header).
-          NIS yang sudah ada akan <b>diperbarui</b> tanpa mengubah tokennya.
+          NIS yang sudah ada akan <b>diperbarui</b> tanpa mengubah passwordnya.
         </div>
         <div class="field">
           <label for="berkas">Berkas .xlsx / .xls / .csv</label>

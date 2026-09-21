@@ -45,7 +45,7 @@ class Auth extends BaseController
 
         if (! $siswa) {
             // pesan digabung: jangan bocorkan NIS mana yang valid
-            return redirect()->back()->with('error', 'NIS atau token salah, atau akun dinonaktifkan.')->withInput();
+            return redirect()->back()->with('error', 'NIS atau password salah, atau akun dinonaktifkan.')->withInput();
         }
 
         session()->regenerate();

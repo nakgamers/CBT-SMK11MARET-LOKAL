@@ -64,10 +64,10 @@
         <div class="row"><span>NIS</span><b class="mono"><?= esc($s['nis']) ?></b></div>
         <div class="row"><span>Kelas</span><b><?= esc($s['kelas']) ?></b></div>
         <div class="tok">
-          <span>Token</span>
+          <span>Password</span>
           <b><?= esc($s['token']) ?></b>
         </div>
-        <div class="cara">Buka alamat di bawah, isi <b>NIS</b> lalu <b>Token</b>:</div>
+        <div class="cara">Buka alamat di bawah, isi <b>NIS</b> lalu <b>Password</b>:</div>
         <div class="url mono"><?= esc(cbt_url_login()) ?></div>
       </div>
     <?php endforeach ?>

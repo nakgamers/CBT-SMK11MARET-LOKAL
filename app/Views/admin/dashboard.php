@@ -50,7 +50,7 @@
       <li>Import daftar siswa dari Excel &rarr; cetak kartu login.</li>
       <li>Buat bank soal per mapel, upload soal manual atau import Excel.</li>
       <li>Buat ujian: pilih bank, kelas, durasi, dan rentang waktu.</li>
-      <li>Saat jadwal aktif, siswa login pakai NIS + token kartu.</li>
+      <li>Saat jadwal aktif, siswa login pakai NIS + password kartu.</li>
       <li>Nilai muncul otomatis; export ke Excel bila perlu.</li>
     </ol>
   </div></div>
