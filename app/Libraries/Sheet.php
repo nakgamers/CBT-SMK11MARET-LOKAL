@@ -96,6 +96,66 @@ class Sheet
     }
 
     /**
+     * Baca format soal topik: satu baris SOAL diikuti lima baris JAWABAN.
+     * Kolom: No, Jenis, Kode, Isi, Status Jawaban, Tingkat kesulitan Soal.
+     * Status Jawaban = 1 menandai kunci yang benar.
+     *
+     * @return list<array{baris:int, teks:string, opsi:array<string,string>, kunci:list<string>}>
+     */
+    public static function soalTopik(string $path, string $clientName = ''): array
+    {
+        $reader = IOFactory::createReaderForFile($path);
+        $reader->setReadDataOnly(true);
+        $sheet = $reader->load($path)->getActiveSheet();
+        $out = [];
+        $current = null;
+
+        $flush = static function () use (&$current, &$out): void {
+            if ($current !== null) {
+                $out[] = $current;
+                $current = null;
+            }
+        };
+
+        for ($row = 1; $row <= $sheet->getHighestDataRow(); $row++) {
+            $jenis = strtoupper(trim((string) $sheet->getCell([2, $row])->getValue()));
+            $kode  = strtoupper(trim((string) $sheet->getCell([3, $row])->getValue()));
+            $isi   = trim((string) $sheet->getCell([4, $row])->getValue());
+
+            if ($jenis === 'SOAL' && $kode === 'Q') {
+                $flush();
+                $current = [
+                    'baris' => $row,
+                    'teks'  => $isi,
+                    'opsi'  => [],
+                    'kunci' => [],
+                ];
+                continue;
+            }
+
+            if ($current === null || $jenis !== 'JAWABAN') {
+                continue;
+            }
+
+            $jumlahOpsi = count($current['opsi']);
+            if ($jumlahOpsi >= 5) {
+                continue;
+            }
+
+            $huruf = chr(65 + $jumlahOpsi);
+            $current['opsi'][$huruf] = $isi;
+            $status = trim((string) $sheet->getCell([5, $row])->getValue());
+            if (in_array(strtoupper($status), ['1', 'BENAR', 'TRUE', 'YA'], true)) {
+                $current['kunci'][] = $huruf;
+            }
+        }
+
+        $flush();
+
+        return $out;
+    }
+
+    /**
      * Kirim file xlsx template ke browser lalu exit.
      *
      * @param list<string>       $header

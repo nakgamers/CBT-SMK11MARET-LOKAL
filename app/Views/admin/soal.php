@@ -99,8 +99,9 @@
       <div class="modal-head"><h3>Import Soal dari Excel</h3><button type="button" onclick="closeModal('mImport')">&times;</button></div>
       <div class="modal-body">
         <div class="alert alert-info">
-          Urutan kolom: <b>pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, opsi_e, kunci, bobot</b>.
-          Kelima opsi A&ndash;E wajib diisi. Kunci harus salah satu A&ndash;E.
+          Format file: satu baris <b>SOAL</b> diikuti lima baris <b>JAWABAN</b>.
+          Kolom: <b>No, Jenis, Kode, Isi, Status Jawaban, Tingkat kesulitan Soal</b>.
+          Isi <b>1</b> pada Status Jawaban untuk menandai jawaban benar. Satu soal harus memiliki tepat satu jawaban benar.
         </div>
         <div class="field">
           <label for="berkas">Berkas .xlsx / .xls / .csv</label>

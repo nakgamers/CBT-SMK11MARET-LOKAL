@@ -116,11 +116,21 @@ class Questions extends BaseController
     public function template()
     {
         Sheet::unduhTemplate(
-            'template-soal.xlsx',
-            ['pertanyaan', 'opsi_a', 'opsi_b', 'opsi_c', 'opsi_d', 'opsi_e', 'kunci', 'bobot'],
+            'template-soal-topik.xlsx',
+            ['No', 'Jenis', 'Kode', 'Isi', 'Status Jawaban', 'Tingkat kesulitan Soal'],
             [
-                ['Ibu kota Indonesia adalah...', 'Bandung', 'Jakarta', 'Surabaya', 'Medan', 'Semarang', 'B', 1],
-                ['2 + 3 x 4 = ...', '20', '14', '24', '11', '9', 'B', 2],
+                [1, 'SOAL', 'Q', 'Ibu kota Indonesia adalah...', '', 1],
+                ['', 'JAWABAN', 'A', 'Bandung', 0, ''],
+                ['', 'JAWABAN', 'A', 'Jakarta', 1, ''],
+                ['', 'JAWABAN', 'A', 'Surabaya', 0, ''],
+                ['', 'JAWABAN', 'A', 'Medan', 0, ''],
+                ['', 'JAWABAN', 'A', 'Semarang', 0, ''],
+                [2, 'SOAL', 'Q', '2 + 3 x 4 = ...', '', 1],
+                ['', 'JAWABAN', 'A', '20', 0, ''],
+                ['', 'JAWABAN', 'A', '14', 1, ''],
+                ['', 'JAWABAN', 'A', '24', 0, ''],
+                ['', 'JAWABAN', 'A', '11', 0, ''],
+                ['', 'JAWABAN', 'A', '9', 0, ''],
             ]
         );
     }
@@ -140,54 +150,55 @@ class Questions extends BaseController
         }
 
         try {
-            $rows = Sheet::rows($file->getTempName(), $file->getClientName());
+            $rows = Sheet::soalTopik($file->getTempName(), $file->getClientName());
         } catch (\Throwable $e) {
             log_message('error', 'Import soal gagal: {m}', ['m' => $e->getMessage()]);
 
             return redirect()->back()->with('error', 'Berkas tidak bisa dibaca: ' . $e->getMessage());
         }
 
+        if ($rows === []) {
+            return redirect()->back()->with('error', 'Format tidak dikenali. Tidak ditemukan baris SOAL dengan lima baris JAWABAN.');
+        }
+
         $model = model(QuestionModel::class);
         $masuk = 0;
         $tolak = [];
 
-        foreach ($rows as $n => $r) {
-            $baris = $n + 2;
-            $kunci = strtoupper(trim($r[6] ?? ''));
+        foreach ($rows as $soal) {
+            $baris = (int) $soal['baris'];
+            $opsi  = $soal['opsi'];
+            $kunci = $soal['kunci'];
+
+            if (trim($soal['teks']) === '') {
+                $tolak[] = "Baris {$baris}: pertanyaan kosong.";
+                continue;
+            }
+            if (count($opsi) !== 5) {
+                $tolak[] = "Baris {$baris}: harus memiliki tepat 5 baris JAWABAN.";
+                continue;
+            }
+            if (count($kunci) !== 1) {
+                $tolak[] = count($kunci) === 0
+                    ? "Baris {$baris}: belum ada jawaban benar (isi Status Jawaban dengan 1)."
+                    : "Baris {$baris}: hanya boleh ada satu Status Jawaban bernilai 1.";
+                continue;
+            }
 
             $data = [
                 'bank_id' => $bankId,
-                'teks'    => $r[0] ?? '',
-                'opsi_a'  => $r[1] ?? '',
-                'opsi_b'  => $r[2] ?? '',
-                'opsi_c'  => $r[3] ?? '',
-                'opsi_d'  => $r[4] ?? '',
-                'opsi_e'  => $r[5] ?? '',
-                'kunci'   => $kunci,
-                'bobot'   => max(1, (int) ($r[7] ?? 1)),
+                'teks'    => $soal['teks'],
+                'opsi_a'  => $opsi['A'],
+                'opsi_b'  => $opsi['B'],
+                'opsi_c'  => $opsi['C'],
+                'opsi_d'  => $opsi['D'],
+                'opsi_e'  => $opsi['E'],
+                'kunci'   => $kunci[0],
+                'bobot'   => 1,
             ];
-
-            if (! in_array($kunci, ['A', 'B', 'C', 'D', 'E'], true)) {
-                $tolak[] = "Baris {$baris}: kunci '{$kunci}' tidak valid (harus A-E).";
-
-                continue;
-            }
-
-            $kosong = [];
-            foreach (QuestionModel::OPSI as $k) {
-                if (trim((string) $data['opsi_' . strtolower($k)]) === '') {
-                    $kosong[] = $k;
-                }
-            }
-            if ($kosong !== []) {
-                $tolak[] = "Baris {$baris}: opsi " . implode('/', $kosong) . ' kosong (A-E wajib diisi semua).';
-
-                continue;
-            }
 
             if ($model->insert($data) === false) {
                 $tolak[] = "Baris {$baris}: " . implode(' ', $model->errors());
-
                 continue;
             }
             $masuk++;
