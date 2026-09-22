@@ -26,6 +26,15 @@
                  style="text-transform:uppercase;letter-spacing:.2em" placeholder="Diberikan pengawas">
         </div>
       <?php endif ?>
+
+      <div class="pacta">
+        <b>Pakta Integritas</b>
+        <label class="check">
+          <input type="checkbox" id="pacta" required>
+          <span>Data di atas adalah benar, saya sebagai siswa/i <?= esc(cbt_sekolah()) ?> siap mengikuti ujian dengan jujur tanpa kecurangan.</span>
+        </label>
+      </div>
+
       <div class="btn-row btn-row-mulai">
         <button class="btn" type="submit">Mulai Ujian &rarr;</button>
         <a class="btn btn-ghost" href="<?= site_url('siswa') ?>">Kembali</a>

@@ -39,12 +39,17 @@
 </div>
 
 <div class="card">
-  <div class="card-head"><h2>Daftar Nilai</h2><span class="small dim"><?= count($hasil) ?> peserta</span></div>
+  <div class="card-head">
+    <h2>Daftar Nilai</h2>
+    <span class="small dim"><?= count($hasil) ?> peserta</span>
+    <input type="search" id="cariNilai" placeholder="Cari nama atau NIS…" aria-label="Cari siswa"
+           class="search-in" autocomplete="off">
+  </div>
   <?php if ($hasil === []): ?>
     <div class="empty">Belum ada siswa yang mengerjakan ujian ini.</div>
   <?php else: ?>
     <div class="table-wrap">
-      <table class="tbl">
+      <table class="tbl" id="tabelNilai">
         <thead><tr>
           <th>#</th><th>NIS</th><th>Nama</th><th>Kelas</th><th>Status</th>
           <th class="center">B</th><th class="center">S</th><th class="center">K</th>
@@ -52,7 +57,7 @@
         </tr></thead>
         <tbody>
         <?php foreach ($hasil as $i => $h): ?>
-          <tr>
+          <tr data-nama="<?= esc($h['nama'], 'attr') ?>" data-nis="<?= esc($h['nis'], 'attr') ?>">
             <td><?= $i + 1 ?></td>
             <td class="mono"><?= esc($h['nis']) ?></td>
             <td><b><?= esc($h['nama']) ?></b></td>
@@ -85,6 +90,32 @@
     </div>
   <?php endif ?>
 </div>
+
+<?php $this->section('js') ?>
+<script>
+(function(){
+  const cari = document.getElementById('cariNilai');
+  if(!cari) return;
+  const baris = document.querySelectorAll('#tabelNilai tbody tr');
+  const kosong = document.createElement('div');
+  kosong.className = 'empty';
+  kosong.textContent = 'Tidak ada siswa yang cocok.';
+  kosong.style.display = 'none';
+  cari.closest('.card').querySelector('.table-wrap').prepend(kosong);
+
+  cari.addEventListener('input', () => {
+    const q = cari.value.trim().toLowerCase();
+    let tampil = 0;
+    baris.forEach(tr => {
+      const cocok = q === '' || tr.dataset.nama.toLowerCase().includes(q) || tr.dataset.nis.toLowerCase().includes(q);
+      tr.style.display = cocok ? '' : 'none';
+      if (cocok) tampil++;
+    });
+    kosong.style.display = tampil === 0 ? 'block' : 'none';
+  });
+})();
+</script>
+<?php $this->endSection() ?>
 
 <?php if ($absen !== []): ?>
   <div class="card">
