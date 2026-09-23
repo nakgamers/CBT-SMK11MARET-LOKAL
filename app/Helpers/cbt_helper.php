@@ -139,23 +139,40 @@ if (! function_exists('cbt_bersihkan_office')) {
             "\u{2264}"  => '<=',
             "\u{2265}"  => '>=',
             "\u{2260}"  => '!=',
-            "\u{221E}"  => '~',
-            "\u{2208}"  => ' in ',
-            "\u{222A}"  => ' u ',
-            "\u{2229}"  => ' n ',
-            "\u{B0}"    => ' derajat ',
+            "\u{00B1}"  => '+-',
+            "\u{00F7}"  => '/',
+            "\u{2215}"  => '/',
+            "\u{2264}"  => '<=',
+            "\u{2265}"  => '>=',
         ];
 
         $teks = strtr($teks, $map);
+        // Akar literal: √(x+4) -> sqrt(x+4) supaya terender rapi.
+        // Hanya jika setelah √ langsung tanda kurung.
+        $teks = preg_replace('/\x{221A}\s*(?=\()/u', 'sqrt', $teks);
+        // Komposisi fungsi: f∘g -> (f o g). Tidak ubah e^(i∘θ) dll.
+        $teks = preg_replace('/(\p{L})\x{2218}(\p{L})/u', '$1 o $2', $teks);
         // "\r\n" & "\r" -> "\n"
         $teks = str_replace(["\r\n", "\r"], "\n", $teks);
         // Lepas baris-baris kosong yang tidak berguna
         $teks = preg_replace('/\n{3,}/', "\n\n", $teks);
 
         // Simbol superscript/subscript yang sering dipakai soal MTK & kimia
-        $super = ["\u{00B2}" => '^2', "\u{00B3}" => '^3', "\u{00B9}" => '^1'];
+        $super = [
+            "\u{00B2}" => '^2', "\u{00B3}" => '^3', "\u{00B9}" => '^1',
+            "\u{2070}" => '^0', "\u{2074}" => '^4', "\u{2075}" => '^5',
+            "\u{2076}" => '^6', "\u{2077}" => '^7', "\u{2078}" => '^8',
+            "\u{2079}" => '^9', "\u{207B}" => '^-', "\u{207A}" => '^+',
+            "\u{00BD}" => '(1)/(2)', "\u{00BC}" => '(1)/(4)', "\u{00BE}" => '(3)/(4)',
+        ];
         $teks = strtr($teks, $super);
-        $sub = ["\u{2080}" => '_0', "\u{2081}" => '_1', "\u{2082}" => '_2', "\u{2083}" => '_3', "\u{2084}" => '_4'];
+        // f⁻¹ -> f^(-1): gabung superscript minus dengan pangkat berikutnya
+        $teks = preg_replace('/\^-\^([0-9]+)/', '^(-$1)', $teks);
+        $sub = [
+            "\u{2080}" => '_0', "\u{2081}" => '_1', "\u{2082}" => '_2', "\u{2083}" => '_3',
+            "\u{2084}" => '_4', "\u{2085}" => '_5', "\u{2086}" => '_6', "\u{2087}" => '_7',
+            "\u{2088}" => '_8', "\u{2089}" => '_9', "\u{208B}" => '_-',
+        ];
         $teks = strtr($teks, $sub);
 
         return trim($teks);
