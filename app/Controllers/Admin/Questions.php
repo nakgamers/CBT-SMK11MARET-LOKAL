@@ -30,12 +30,12 @@ class Questions extends BaseController
 
         $data = [
             'bank_id' => $bankId,
-            'teks'    => trim((string) $this->request->getPost('teks')),
-            'opsi_a'  => trim((string) $this->request->getPost('opsi_a')),
-            'opsi_b'  => trim((string) $this->request->getPost('opsi_b')),
-            'opsi_c'  => trim((string) $this->request->getPost('opsi_c')),
-            'opsi_d'  => trim((string) $this->request->getPost('opsi_d')),
-            'opsi_e'  => trim((string) $this->request->getPost('opsi_e')),
+            'teks'    => cbt_bersihkan_office(trim((string) $this->request->getPost('teks'))),
+            'opsi_a'  => cbt_bersihkan_office(trim((string) $this->request->getPost('opsi_a'))),
+            'opsi_b'  => cbt_bersihkan_office(trim((string) $this->request->getPost('opsi_b'))),
+            'opsi_c'  => cbt_bersihkan_office(trim((string) $this->request->getPost('opsi_c'))),
+            'opsi_d'  => cbt_bersihkan_office(trim((string) $this->request->getPost('opsi_d'))),
+            'opsi_e'  => cbt_bersihkan_office(trim((string) $this->request->getPost('opsi_e'))),
             'kunci'   => strtoupper(trim((string) $this->request->getPost('kunci'))),
             'bobot'   => max(1, (int) $this->request->getPost('bobot')),
         ];

@@ -36,7 +36,7 @@
       </form>
     </div>
     <div class="card-body">
-      <div style="margin-bottom:.7rem"><?= nl2br(esc($q['teks'])) ?></div>
+      <div style="margin-bottom:.7rem"><?= cbt_render_soal($q['teks']) ?></div>
       <?php if (! empty($q['gambar'])): ?>
         <img class="q-img" style="max-height:180px" src="<?= base_url('uploads/soal/' . $q['gambar']) ?>" alt="Gambar soal <?= $i + 1 ?>">
       <?php endif ?>
@@ -45,7 +45,7 @@
           if ($isi === null || $isi === '') { continue; }
       ?>
         <div class="opt<?= strtoupper((string) $q['kunci']) === $k ? ' benar' : '' ?>" style="cursor:default;padding:.45rem .7rem;margin-bottom:.35rem">
-          <span class="k"><?= $k ?></span><span><?= nl2br(esc($isi)) ?></span>
+          <span class="k"><?= $k ?></span><span><?= cbt_render_soal($isi) ?></span>
         </div>
       <?php endforeach ?>
     </div>
@@ -60,14 +60,29 @@
       <input type="hidden" name="id" id="q_id">
       <div class="modal-head"><h3 id="q_judul">Tambah Soal</h3><button type="button" onclick="closeModal('mSoal')">&times;</button></div>
       <div class="modal-body">
-        <div class="field"><label for="q_teks">Pertanyaan</label><textarea id="q_teks" name="teks" required rows="3"></textarea></div>
+        <div class="field">
+          <label for="q_teks">Pertanyaan</label>
+          <textarea id="q_teks" name="teks" required rows="3"></textarea>
+          <div class="rumus-bar">
+            <span class="small muted">Bantu rumus:</span>
+            <button type="button" class="btn btn-ghost btn-sm" data-sisip="sqrt(">&#8730; akar</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-sisip="^2">x&sup2; pangkat</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-sisip="_1">x&#8321; subscript</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-sisip="(/)">pecahan</button>
+          </div>
+          <div class="hint">
+            Tulis rumus dengan notasi natural: <b>sqrt(x+4)</b>, <b>x^2</b>, <b>x_1</b>,
+            <b>(5x-1)/(x+4)</b>. Pecahan dengan tanda kurung otomatis ditumpuk.
+          </div>
+          <div class="rumus-preview" id="prevTeks"></div>
+        </div>
         <div class="alert alert-info small">Pilihan ganda A&ndash;E: kelima opsi wajib diisi.</div>
         <div class="grid-2">
-          <div class="field"><label for="q_a">Opsi A</label><textarea id="q_a" name="opsi_a" required rows="2"></textarea></div>
-          <div class="field"><label for="q_b">Opsi B</label><textarea id="q_b" name="opsi_b" required rows="2"></textarea></div>
-          <div class="field"><label for="q_c">Opsi C</label><textarea id="q_c" name="opsi_c" required rows="2"></textarea></div>
-          <div class="field"><label for="q_d">Opsi D</label><textarea id="q_d" name="opsi_d" required rows="2"></textarea></div>
-          <div class="field"><label for="q_e">Opsi E</label><textarea id="q_e" name="opsi_e" required rows="2"></textarea></div>
+          <div class="field"><label for="q_a">Opsi A</label><textarea id="q_a" name="opsi_a" required rows="2"></textarea><div class="rumus-preview" id="prevA"></div></div>
+          <div class="field"><label for="q_b">Opsi B</label><textarea id="q_b" name="opsi_b" required rows="2"></textarea><div class="rumus-preview" id="prevB"></div></div>
+          <div class="field"><label for="q_c">Opsi C</label><textarea id="q_c" name="opsi_c" required rows="2"></textarea><div class="rumus-preview" id="prevC"></div></div>
+          <div class="field"><label for="q_d">Opsi D</label><textarea id="q_d" name="opsi_d" required rows="2"></textarea><div class="rumus-preview" id="prevD"></div></div>
+          <div class="field"><label for="q_e">Opsi E</label><textarea id="q_e" name="opsi_e" required rows="2"></textarea><div class="rumus-preview" id="prevE"></div></div>
           <div>
             <div class="field"><label for="q_kunci">Kunci Jawaban</label>
               <select id="q_kunci" name="kunci" required>
@@ -135,7 +150,96 @@ function formSoal(q) {
   v('q_bobot', q ? q.bobot : 1);
   document.getElementById('q_gambar').value = '';
   document.getElementById('q_gambar_now').textContent = q && q.gambar ? 'Gambar saat ini: ' + q.gambar + ' (unggah baru untuk mengganti)' : '';
+  perbaruiSemuaPreview();
   openModal('mSoal');
 }
+
+/* ---- render rumus: versi JS dari cbt_rumus_html() PHP ----
+   Preview ditarik dari textarea (sumber terpercaya), lalu di-escape
+   di sini sebelum dipakai untuk membangun tag rumus. */
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+function renderRumus(teks) {
+  let t = escapeHtml(teks);
+  // akar
+  t = t.replace(/sqrt\(([^()]*)\)/g, (_, isi) =>
+    '<span class="mtk-akar">&#8730;<span class="mtk-akar-isi">' + isi + '</span></span>');
+  // pangkat
+  t = t.replace(/\^(\([^()]*\)|[0-9A-Za-z.+-]+)/g, (_, isi) => {
+    if (isi[0] === '(') isi = isi.slice(1, -1);
+    return '<sup>' + isi + '</sup>';
+  });
+  // subscript
+  t = t.replace(/_(\([^()]*\)|[0-9A-Za-z.+-]+)/g, (_, isi) => {
+    if (isi[0] === '(') isi = isi.slice(1, -1);
+    return '<sub>' + isi + '</sub>';
+  });
+  // pecahan tumpuk
+  t = t.replace(/\(([^()]*)\)\/\(([^()]*)\)/g, (_, atas, bawah) =>
+    '<span class="mtk-frac"><span class="mtk-atas">' + atas + '</span><span class="mtk-bawah">' + bawah + '</span></span>');
+  // simbol
+  t = t
+    .replace(/&lt;=/g, '&le;').replace(/&gt;=/g, '&ge;')
+    .replace(/&lt;&gt;/g, '&ne;').replace(/!=/g, '&ne;')
+    .replace(/\+-/g, '&plusmn;').replace(/\*/g, '&times;')
+    .replace(/-&gt;/g, '&rarr;');
+  // baris baru
+  return t.replace(/\n/g, '<br>');
+}
+
+/* pasang preview untuk satu textarea */
+function pasangPreview(textareaId, previewId) {
+  const ta = document.getElementById(textareaId);
+  const pv = document.getElementById(previewId);
+  if (!ta || !pv) return;
+  const perbarui = () => {
+    const isi = ta.value.trim();
+    pv.innerHTML = isi === '' ? '' : '<span class="small muted">Tampilan siswa:</span> ' + renderRumus(isi);
+    pv.style.display = isi === '' ? 'none' : '';
+  };
+  ta.addEventListener('input', perbarui);
+  perbarui();
+}
+
+function perbaruiSemuaPreview() {
+  const pasangan = [['q_teks','prevTeks'],['q_a','prevA'],['q_b','prevB'],['q_c','prevC'],['q_d','prevD'],['q_e','prevE']];
+  pasangan.forEach(([ta, pv]) => {
+    const el = document.getElementById(pv);
+    if (el) {
+      const sumber = document.getElementById(ta);
+      el.innerHTML = sumber && sumber.value.trim() !== ''
+        ? '<span class="small muted">Tampilan siswa:</span> ' + renderRumus(sumber.value)
+        : '';
+      el.style.display = sumber && sumber.value.trim() !== '' ? '' : 'none';
+    }
+  });
+}
+
+/* tombol bantu rumus: sisipkan notasi di posisi kursor */
+document.querySelectorAll('[data-sisip]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tujuan = btn.closest('.field').querySelector('textarea');
+    if (!tujuan) return;
+    const nama = btn.dataset.sisip;
+    const mulai = tujuan.selectionStart ?? tujuan.value.length;
+    const akhir = tujuan.selectionEnd ?? tujuan.value.length;
+    let sisip = nama;
+    // "(/)" -> ( pembilang )/( penyebut ) posisi siap diketik
+    if (sisip === '(/)') sisip = '()/()';
+    tujuan.value = tujuan.value.slice(0, mulai) + sisip + tujuan.value.slice(akhir);
+    // letakkan kursor di tempat yang masuk akal
+    const pos = sisip === '()/()' ? mulai + 1 : mulai + sisip.length;
+    tujuan.focus();
+    tujuan.setSelectionRange(pos, pos);
+    tujuan.dispatchEvent(new Event('input'));
+  });
+});
+
+/* pasang preview saat halaman terbuka */
+[['q_teks','prevTeks'],['q_a','prevA'],['q_b','prevB'],['q_c','prevC'],['q_d','prevD'],['q_e','prevE']]
+  .forEach(([ta, pv]) => pasangPreview(ta, pv));
 </script>
 <?= $this->endSection() ?>

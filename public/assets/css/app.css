@@ -791,3 +791,43 @@ ul.pagination li.disabled span { opacity: .45; }
 }
 .search-in:focus { outline: 2px solid var(--brand); outline-offset: 1px; border-color: var(--brand); }
 @media (max-width: 640px) { .search-in { width: 100%; } }
+
+/* ---- rumus matematika (notasi natural: sqrt(), ^, _(), (a)/(b)) ---- */
+.mtk-frac {
+  display: inline-flex;
+  flex-direction: column;
+  vertical-align: middle;
+  text-align: center;
+  margin: 0 .15em;
+  line-height: 1.1;
+}
+.mtk-frac .mtk-atas {
+  padding: 0 .35em .08em;
+  border-bottom: 1.5px solid currentColor;
+}
+.mtk-frac .mtk-bawah { padding: .08em .35em 0; }
+/* akar: vektor garis atas via border, supaya offline tanpa font khusus */
+.mtk-akar { position: relative; display: inline-block; margin-right: .08em; }
+.mtk-akar::before {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: -.18em;
+  border-top: 1.5px solid currentColor;
+}
+.mtk-akar-isi { padding-left: .12em; }
+sup, sub { font-size: .72em; line-height: 0; }
+
+/* ---- preview rumus & tombol bantu di form soal ---- */
+.rumus-bar { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; margin: .3rem 0; }
+.rumus-bar .btn { font-size: .8rem; padding: .2rem .5rem; }
+.rumus-preview {
+  margin-top: .4rem;
+  padding: .55rem .7rem;
+  background: #f8fafc;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  font-size: .95rem;
+  line-height: 1.5;
+}
+.rumus-preview:empty { display: none; }
+.rumus-preview .muted { display: block; font-size: .72rem; margin-bottom: .15rem; }

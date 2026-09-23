@@ -6,7 +6,7 @@
 <title><?= esc($title ?? 'Admin') ?> — <?= esc(cbt_app()) ?></title>
 <link rel="icon" href="<?= base_url('favicon.ico') ?>" sizes="any">
 <?php if (cbt_logo('192') !== ''): ?><link rel="apple-touch-icon" href="<?= cbt_logo('192') ?>"><?php endif ?>
-<link rel="stylesheet" href="<?= base_url('assets/css/app.css') ?>">
+<link rel="stylesheet" href="<?= cbt_css_url() ?>">
 </head>
 <body>
 <?php $seg = service('uri')->getSegment(2) ?: ''; ?>

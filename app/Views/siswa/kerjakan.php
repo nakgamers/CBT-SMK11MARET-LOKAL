@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= esc($exam['nama']) ?> — <?= esc(cbt_app()) ?></title>
-<link rel="stylesheet" href="<?= base_url('assets/css/app.css') ?>">
+<link rel="stylesheet" href="<?= cbt_css_url() ?>">
 <link rel="stylesheet" href="<?= base_url('assets/vendor/sweetalert2.min.css') ?>">
 <script src="<?= base_url('assets/vendor/sweetalert2.min.js') ?>"></script>
 </head>
@@ -38,7 +38,7 @@
           </label>
         </div>
         <div class="q-body">
-          <div class="q-text" id="teks<?= (int) $q['id'] ?>"><?= nl2br(esc($q['teks'])) ?>
+          <div class="q-text" id="teks<?= (int) $q['id'] ?>"><?= cbt_render_soal($q['teks']) ?>
             <?php if (! empty($q['gambar'])): ?>
               <button class="q-image-button" type="button"
                       onclick="lihatGambar(this.querySelector('img'))"
@@ -56,7 +56,7 @@
             <label class="opt<?= $sel ? ' sel' : '' ?>">
               <input type="radio" name="q<?= (int) $q['id'] ?>" value="<?= $k ?>" <?= $sel ? 'checked' : '' ?>>
               <span class="k"><?= $k ?></span>
-              <span><?= nl2br(esc($isi)) ?></span>
+              <span><?= cbt_render_soal($isi) ?></span>
             </label>
           <?php endforeach ?>
           </div>

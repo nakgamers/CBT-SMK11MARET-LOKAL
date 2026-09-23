@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kartu Login Siswa</title>
 <link rel="icon" href="<?= base_url('favicon.ico') ?>" sizes="any">
-<link rel="stylesheet" href="<?= base_url('assets/css/app.css') ?>">
+<link rel="stylesheet" href="<?= cbt_css_url() ?>">
 </head>
 <body style="background:#fff">
 <div style="max-width:900px;margin:0 auto;padding:1rem">
