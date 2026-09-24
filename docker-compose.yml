@@ -17,6 +17,7 @@ services:
     volumes:
       - ./.env:/app/.env:ro
       - ./writable/uploads:/app/writable/uploads
+      - ./writable/public-uploads:/app/public/uploads
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/login || exit 1"]
       interval: 30s

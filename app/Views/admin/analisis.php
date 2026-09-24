@@ -78,7 +78,7 @@
         <?php foreach ($butir as $b): ?>
           <tr>
             <td style="min-width:280px">
-              <div class="small"><?= esc(mb_strimwidth(trim(preg_replace('/\s+/', ' ', $b['teks'])), 0, 110, '…')) ?></div>
+              <div class="small"><?= esc(mb_strimwidth(cbt_soal_ringkas($b['teks']), 0, 110, '…')) ?></div>
               <span class="dim small">bobot <?= (int) $b['bobot'] ?></span>
             </td>
             <td class="center"><span class="badge badge-selesai"><?= esc($b['kunci']) ?></span></td>

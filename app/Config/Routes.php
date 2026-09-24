@@ -55,6 +55,7 @@ $routes->group('admin', ['filter' => 'adminAuth'], static function ($routes): vo
     // soal
     $routes->get('soal/(:num)', 'Admin\Questions::index/$1');
     $routes->post('soal/(:num)/simpan', 'Admin\Questions::simpan/$1');
+    $routes->post('soal/(:num)/upload-inline', 'Admin\Questions::uploadInline/$1');
     $routes->post('soal/(:num)/hapus/(:num)', 'Admin\Questions::hapus/$1/$2');
     $routes->post('soal/(:num)/import', 'Admin\Questions::import/$1');
     $routes->get('soal/template', 'Admin\Questions::template');

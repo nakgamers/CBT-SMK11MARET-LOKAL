@@ -27,18 +27,32 @@ class Questions extends BaseController
     {
         $model = model(QuestionModel::class);
         $id    = (int) $this->request->getPost('id');
+        $rich  = $this->request->getPost('_format') === 'rich-v1';
+        $isi   = static function ($nilai) use ($rich): string {
+            $nilai = trim((string) $nilai);
+
+            return $rich ? cbt_siapkan_html_soal($nilai) : cbt_bersihkan_office($nilai);
+        };
 
         $data = [
             'bank_id' => $bankId,
-            'teks'    => cbt_bersihkan_office(trim((string) $this->request->getPost('teks'))),
-            'opsi_a'  => cbt_bersihkan_office(trim((string) $this->request->getPost('opsi_a'))),
-            'opsi_b'  => cbt_bersihkan_office(trim((string) $this->request->getPost('opsi_b'))),
-            'opsi_c'  => cbt_bersihkan_office(trim((string) $this->request->getPost('opsi_c'))),
-            'opsi_d'  => cbt_bersihkan_office(trim((string) $this->request->getPost('opsi_d'))),
-            'opsi_e'  => cbt_bersihkan_office(trim((string) $this->request->getPost('opsi_e'))),
+            'teks'    => $isi($this->request->getPost('teks')),
+            'opsi_a'  => $isi($this->request->getPost('opsi_a')),
+            'opsi_b'  => $isi($this->request->getPost('opsi_b')),
+            'opsi_c'  => $isi($this->request->getPost('opsi_c')),
+            'opsi_d'  => $isi($this->request->getPost('opsi_d')),
+            'opsi_e'  => $isi($this->request->getPost('opsi_e')),
             'kunci'   => strtoupper(trim((string) $this->request->getPost('kunci'))),
             'bobot'   => max(1, (int) $this->request->getPost('bobot')),
         ];
+
+        if ($rich) {
+            foreach (['teks' => 'Pertanyaan', 'opsi_a' => 'Opsi A', 'opsi_b' => 'Opsi B', 'opsi_c' => 'Opsi C', 'opsi_d' => 'Opsi D', 'opsi_e' => 'Opsi E'] as $kolom => $label) {
+                if (cbt_html_teks_kosong($data[$kolom])) {
+                    return redirect()->back()->with('error', $label . ' wajib diisi.')->withInput();
+                }
+            }
+        }
 
         // kunci tidak boleh menunjuk opsi kosong (opsi A-E kini wajib semua,
         // cek ini tetap ada sebagai jaring bila validasi model berubah)
@@ -104,6 +118,65 @@ class Questions extends BaseController
 
         return redirect()->to(site_url('admin/soal/' . $bankId))
             ->with('success', $id ? 'Soal diperbarui.' : 'Soal ditambahkan.');
+    }
+
+    /** Upload gambar rumus dari clipboard/editor; hanya gambar raster lokal. */
+    public function uploadInline(int $bankId)
+    {
+        if (! model(BankModel::class)->find($bankId)) {
+            return $this->response->setStatusCode(404)->setJSON(['ok' => false, 'error' => 'Bank soal tidak ditemukan.']);
+        }
+
+        $file = $this->request->getFile('gambar');
+        if ($file === null || ! $file->isValid()) {
+            $pesan = $file?->getError() === UPLOAD_ERR_INI_SIZE
+                ? 'Gambar terlalu besar. Maksimal 2 MB.'
+                : 'Gambar dari clipboard tidak dapat dibaca.';
+
+            return $this->response->setStatusCode(422)->setJSON(['ok' => false, 'error' => $pesan]);
+        }
+        if ($file->getSize() < 1 || $file->getSize() > 2 * 1024 * 1024) {
+            return $this->response->setStatusCode(422)->setJSON(['ok' => false, 'error' => 'Ukuran gambar maksimal 2 MB.']);
+        }
+
+        $mime = strtolower((string) $file->getMimeType());
+        $ekstensi = [
+            'image/png'  => 'png',
+            'image/jpeg' => 'jpg',
+            'image/gif'  => 'gif',
+            'image/webp' => 'webp',
+        ][$mime] ?? null;
+        if ($ekstensi === null) {
+            return $this->response->setStatusCode(422)->setJSON(['ok' => false, 'error' => 'Gambar harus PNG, JPG, GIF, atau WebP.']);
+        }
+
+        $ukuran = @getimagesize($file->getTempName());
+        $lebar  = (int) ($ukuran[0] ?? 0);
+        $tinggi = (int) ($ukuran[1] ?? 0);
+        if ($lebar < 1 || $tinggi < 1 || $lebar > 6000 || $tinggi > 6000 || $lebar * $tinggi > 16000000) {
+            return $this->response->setStatusCode(422)->setJSON(['ok' => false, 'error' => 'Dimensi gambar tidak valid atau terlalu besar.']);
+        }
+
+        $dir = rtrim(FCPATH, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'soal-inline';
+        if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
+            return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'error' => 'Folder gambar belum siap.']);
+        }
+
+        $nama = bin2hex(random_bytes(16)) . '.' . $ekstensi;
+        try {
+            $file->move($dir, $nama);
+        } catch (\Throwable $e) {
+            log_message('error', 'Upload gambar inline soal gagal: {m}', ['m' => $e->getMessage()]);
+
+            return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'error' => 'Gambar gagal disimpan.']);
+        }
+
+        return $this->response->setJSON([
+            'ok'     => true,
+            'path'   => '/uploads/soal-inline/' . $nama,
+            'width'  => $lebar,
+            'height' => $tinggi,
+        ]);
     }
 
     public function hapus(int $bankId, int $id)

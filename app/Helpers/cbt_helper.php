@@ -240,19 +240,213 @@ if (! function_exists('cbt_rumus_html')) {
     }
 }
 
+if (! function_exists('cbt_soal_html')) {
+    /** Penanda internal agar soal lama dan rich text memakai jalur berbeda. */
+    function cbt_soal_html(?string $teks): bool
+    {
+        return str_starts_with((string) $teks, '<!--CBT-RICH-V1-->');
+    }
+}
+
+if (! function_exists('cbt_sanitasi_html_soal')) {
+    /**
+     * Bersihkan HTML hasil paste Word. Hanya format belajar yang aman yang
+     * dipertahankan; script, style, event handler dan gambar nonlokal dibuang.
+     */
+    function cbt_sanitasi_html_soal(?string $html): string
+    {
+        $html = (string) $html;
+        if (cbt_soal_html($html)) {
+            $html = substr($html, strlen('<!--CBT-RICH-V1-->'));
+        }
+        if (trim($html) === '') {
+            return '';
+        }
+
+        $dom = new \DOMDocument('1.0', 'UTF-8');
+        $lama = libxml_use_internal_errors(true);
+        $dom->loadHTML(
+            '<?xml encoding="utf-8"?><div id="cbt-rich-root">' . $html . '</div>',
+            LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD | LIBXML_NONET
+        );
+        libxml_clear_errors();
+        libxml_use_internal_errors($lama);
+
+        $xpath = new \DOMXPath($dom);
+        $root  = $xpath->query('//*[@id="cbt-rich-root"]')->item(0);
+        if (! $root instanceof \DOMElement) {
+            return '';
+        }
+
+        $boleh = array_flip([
+            'p', 'div', 'br', 'strong', 'em', 'u', 's', 'sup', 'sub',
+            'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tfoot', 'tr',
+            'td', 'th', 'img', 'span',
+        ]);
+        $buangIsi = array_flip([
+            'script', 'style', 'iframe', 'object', 'embed', 'form', 'input',
+            'button', 'textarea', 'select', 'option', 'link', 'meta', 'base',
+            'svg', 'math', 'canvas', 'video', 'audio',
+        ]);
+
+        $bersihkan = static function (\DOMNode $node) use (&$bersihkan, $dom, $boleh, $buangIsi): void {
+            foreach (iterator_to_array($node->childNodes) as $anak) {
+                if ($anak instanceof \DOMComment || $anak instanceof \DOMProcessingInstruction) {
+                    $node->removeChild($anak);
+                    continue;
+                }
+                if (! $anak instanceof \DOMElement) {
+                    continue;
+                }
+
+                $tag = strtolower($anak->tagName);
+                if (isset($buangIsi[$tag])) {
+                    $node->removeChild($anak);
+                    continue;
+                }
+
+                if ($tag === 'b' || $tag === 'i') {
+                    $baru = $dom->createElement($tag === 'b' ? 'strong' : 'em');
+                    while ($anak->firstChild !== null) {
+                        $baru->appendChild($anak->firstChild);
+                    }
+                    $node->replaceChild($baru, $anak);
+                    $anak = $baru;
+                    $tag  = strtolower($anak->tagName);
+                }
+
+                if (! isset($boleh[$tag])) {
+                    $bersihkan($anak);
+                    while ($anak->firstChild !== null) {
+                        $node->insertBefore($anak->firstChild, $anak);
+                    }
+                    $node->removeChild($anak);
+                    continue;
+                }
+
+                $atribut = [];
+                foreach ($anak->attributes as $attr) {
+                    $atribut[] = $attr->name;
+                }
+                foreach ($atribut as $nama) {
+                    $anak->removeAttribute($nama);
+                }
+
+                if ($tag === 'img') {
+                    // Atribut telah dibuang; ambil src dari salinan DOM asal.
+                    // src disimpan sementara sebelum loop atribut di bawah.
+                    continue;
+                }
+
+                $bersihkan($anak);
+            }
+        };
+
+        // Sanitasi img perlu menyimpan src sebelum seluruh atribut dibuang.
+        $gambar = [];
+        foreach ($xpath->query('.//img', $root) as $img) {
+            if ($img instanceof \DOMElement) {
+                $gambar[spl_object_id($img)] = [
+                    'src' => $img->getAttribute('src'),
+                    'alt' => $img->getAttribute('alt'),
+                ];
+            }
+        }
+
+        $bersihkan($root);
+
+        foreach (iterator_to_array($root->getElementsByTagName('img')) as $img) {
+            if (! $img instanceof \DOMElement) {
+                continue;
+            }
+            $asal = $gambar[spl_object_id($img)] ?? ['src' => '', 'alt' => 'Rumus'];
+            $src  = (string) $asal['src'];
+            if (! preg_match('#^/uploads/soal-inline/[A-Za-z0-9._-]+\.(?:png|jpe?g|gif|webp)$#i', $src)) {
+                $img->parentNode?->removeChild($img);
+                continue;
+            }
+            $img->setAttribute('src', $src);
+            $img->setAttribute('alt', mb_substr(trim((string) $asal['alt']) ?: 'Rumus', 0, 120));
+            $img->setAttribute('class', 'rich-inline-image');
+        }
+
+        $hasil = '';
+        foreach ($root->childNodes as $anak) {
+            $hasil .= $dom->saveHTML($anak);
+        }
+
+        return trim($hasil);
+    }
+}
+
+if (! function_exists('cbt_html_teks_kosong')) {
+    /** HTML tanpa teks dan tanpa gambar dianggap kosong oleh validasi form. */
+    function cbt_html_teks_kosong(?string $html): bool
+    {
+        $html = cbt_sanitasi_html_soal($html);
+        if (preg_match('/<img\b/i', $html)) {
+            return false;
+        }
+        $teks = html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        return trim((string) preg_replace('/\s+/u', '', $teks)) === '';
+    }
+}
+
+if (! function_exists('cbt_siapkan_html_soal')) {
+    /** Sanitasi lalu beri marker; tidak pernah menyimpan HTML Word mentah. */
+    function cbt_siapkan_html_soal(?string $html): string
+    {
+        $bersih = cbt_sanitasi_html_soal($html);
+
+        return $bersih === '' ? '' : '<!--CBT-RICH-V1-->' . $bersih;
+    }
+}
+
+if (! function_exists('cbt_render_rumus_html_aman')) {
+    /** Terapkan notasi natural hanya pada text node, tidak pada tag/atribut. */
+    function cbt_render_rumus_html_aman(string $html): string
+    {
+        $bagian = preg_split('/(<[^>]+>)/', $html, -1, PREG_SPLIT_DELIM_CAPTURE);
+        if ($bagian === false) {
+            return $html;
+        }
+        foreach ($bagian as $i => $isi) {
+            if ($isi === '' || $isi[0] === '<') {
+                continue;
+            }
+            $bagian[$i] = cbt_rumus_html(cbt_bersihkan_office($isi));
+        }
+
+        return implode('', $bagian);
+    }
+}
+
+if (! function_exists('cbt_soal_ringkas')) {
+    /** Teks polos untuk daftar analisis/jawaban tanpa membocorkan marker HTML. */
+    function cbt_soal_ringkas(?string $teks): string
+    {
+        if (cbt_soal_html($teks)) {
+            $teks = html_entity_decode(strip_tags(cbt_sanitasi_html_soal($teks)), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        }
+
+        return trim((string) preg_replace('/\s+/u', ' ', (string) $teks));
+    }
+}
+
 if (! function_exists('cbt_render_soal')) {
     /**
-     * Satu pintu render teks soal / opsi jawaban.
-     *
-     * 1. bersihkan karakter Word/Excel
-     * 2. esc() supaya aman dari XSS
-     * 3. render notasi rumus (sqrt, ^, /, _)
-     * 4. baris baru -> <br>
-     *
-     * Pemanggil WAJIB memakai ini, bukan nl2br(esc(...)) langsung.
+     * Satu pintu render soal. Teks lama memakai jalur lama tanpa perubahan;
+     * hanya konten ber-marker editor yang melewati sanitizer rich text.
      */
     function cbt_render_soal(?string $teks, bool $rumus = true): string
     {
+        if (cbt_soal_html($teks)) {
+            $html = cbt_sanitasi_html_soal($teks);
+
+            return $rumus ? cbt_render_rumus_html_aman($html) : $html;
+        }
+
         $teks = cbt_bersihkan_office((string) $teks);
         $teks = esc($teks);
         if ($rumus) {

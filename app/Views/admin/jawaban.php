@@ -89,11 +89,11 @@
           <tr>
             <td class="center"><b><?= (int) $d['no'] ?></b></td>
             <td style="min-width:300px">
-              <div class="small"><?= esc(mb_strimwidth(trim(preg_replace('/\s+/', ' ', $d['teks'])), 0, 120, '…')) ?></div>
+              <div class="small"><?= esc(mb_strimwidth(cbt_soal_ringkas($d['teks']), 0, 120, '…')) ?></div>
               <div class="opsi-mini">
                 <?php foreach (\App\Models\QuestionModel::OPSI as $k): ?>
                   <?php
-                      $isiOpsi = (string) ($d['opsi_' . strtolower($k)] ?? '');
+                      $isiOpsi = cbt_soal_ringkas((string) ($d['opsi_' . strtolower($k)] ?? ''));
                       $kelas   = 'o';
                       if ($k === $d['kunci']) {
                           $kelas .= ' kunci';
