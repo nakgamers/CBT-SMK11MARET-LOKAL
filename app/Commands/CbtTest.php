@@ -550,10 +550,10 @@ class CbtTest extends BaseCommand
 
         // ---------- import siswa
         $fSiswa = $tmp . DIRECTORY_SEPARATOR . 'uji-siswa-' . bin2hex(random_bytes(4)) . '.xlsx';
-        $this->tulisXlsx($fSiswa, ['nis', 'nama', 'kelas', 'jk'], [
-            ['__IMP001__', 'Import Satu', '__IMPKLS__', 'L'],
-            ['__IMP002__', 'Import Dua', '__IMPKLS__', 'P'],
-            ['', 'Tanpa NIS', '__IMPKLS__', 'L'],   // harus ditolak
+        $this->tulisXlsx($fSiswa, ['username', 'password', 'nama', 'kelas'], [
+            ['__IMP001__', 'Pass001*', 'Import Satu', '__IMPKLS__'],
+            ['__IMP002__', 'Pass002*', 'Import Dua', '__IMPKLS__'],
+            ['', 'Pass003*', 'Tanpa Username', '__IMPKLS__'], // harus ditolak
         ]);
 
         $r = $this->upload('admin/siswa/import', $fSiswa, $this->jarAdmin);
@@ -561,21 +561,22 @@ class CbtTest extends BaseCommand
 
         $masuk = $db->table('students')->whereIn('nis', ['__IMP001__', '__IMP002__'])->countAllResults();
         $this->ok($masuk === 2, "2 siswa masuk dari xlsx (dapat {$masuk})");
-        $tolak = $db->table('students')->where('nama', 'Tanpa NIS')->countAllResults();
-        $this->ok($tolak === 0, 'Baris tanpa NIS ditolak, tidak masuk DB');
+        $tolak = $db->table('students')->where('nama', 'Tanpa Username')->countAllResults();
+        $this->ok($tolak === 0, 'Baris tanpa username ditolak, tidak masuk DB');
 
         $tok = $db->table('students')->where('nis', '__IMP001__')->get()->getRowArray()['token'] ?? '';
-        $this->ok($tok === '__IMP001__', "Token import disamakan dengan NIS (dapat '{$tok}')");
+        $this->ok($tok === 'PASS001*', "Password diimpor dari Excel (dapat '{$tok}')");
 
-        // import ulang: data diperbarui, token TIDAK berubah
-        $this->tulisXlsx($fSiswa, ['nis', 'nama', 'kelas', 'jk'], [
-            ['__IMP001__', 'Import Satu Revisi', '__IMPKLS2__', 'L'],
+        // import ulang: data dan password diperbarui
+        $this->tulisXlsx($fSiswa, ['username', 'password', 'nama', 'kelas'], [
+            ['__IMP001__', 'Baru001*', 'Import Satu Revisi', '__IMPKLS2__'],
         ]);
         $this->upload('admin/siswa/import', $fSiswa, $this->jarAdmin);
         $row = $db->table('students')->where('nis', '__IMP001__')->get()->getRowArray();
         $this->ok($row['nama'] === 'Import Satu Revisi', 'Import ulang memperbarui nama');
         $this->ok($row['kelas'] === '__IMPKLS2__', 'Import ulang memperbarui kelas');
-        $this->ok($row['token'] === $tok, 'Token TIDAK berubah saat import ulang (kartu tetap sah)');
+        $this->ok($row['token'] === 'BARU001*', 'Import ulang memperbarui password');
+        $this->ok($row['jk'] === 'L', 'Jenis kelamin default L');
         $jml = $db->table('students')->where('nis', '__IMP001__')->countAllResults();
         $this->ok($jml === 1, "Tidak ada duplikat NIS (dapat {$jml} baris)");
 
@@ -606,7 +607,7 @@ class CbtTest extends BaseCommand
 
         // ---------- csv juga harus jalan
         $fCsv = $tmp . DIRECTORY_SEPARATOR . 'uji-siswa-' . bin2hex(random_bytes(4)) . '.csv';
-        file_put_contents($fCsv, "nis,nama,kelas,jk\n__IMPCSV__,Import Csv,__IMPKLS__,P\n");
+        file_put_contents($fCsv, "username,password,nama,kelas\n__IMPCSV__,Csv001*,Import Csv,__IMPKLS__\n");
         $this->upload('admin/siswa/import', $fCsv, $this->jarAdmin);
         $csvMasuk = $db->table('students')->where('nis', '__IMPCSV__')->countAllResults();
         $this->ok($csvMasuk === 1, "Import CSV juga berhasil (dapat {$csvMasuk})");

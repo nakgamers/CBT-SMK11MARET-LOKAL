@@ -119,8 +119,8 @@
       <div class="modal-head"><h3>Import Siswa dari Excel</h3><button type="button" onclick="closeModal('mImport')">&times;</button></div>
       <div class="modal-body">
         <div class="alert alert-info">
-          Kolom wajib berurutan: <b>nis, nama, kelas, jk</b> (baris pertama header).
-          NIS yang sudah ada akan <b>diperbarui</b> tanpa mengubah passwordnya.
+          Kolom wajib berurutan: <b>Username, Password, nama, kelas</b> (baris pertama header).
+          Username yang sudah ada akan <b>diperbarui</b>, termasuk passwordnya. Jenis kelamin otomatis diisi L.
         </div>
         <div class="field">
           <label for="berkas">Berkas .xlsx / .xls / .csv</label>

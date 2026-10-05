@@ -81,9 +81,9 @@ class Students extends BaseController
 
     public function template()
     {
-        Sheet::unduhTemplate('template-siswa.xlsx', ['nis', 'nama', 'kelas', 'jk'], [
-            ['2024001', 'Ahmad Fauzi', 'XII RPL 1', 'L'],
-            ['2024002', 'Siti Aminah', 'XII RPL 1', 'P'],
+        Sheet::unduhTemplate('template-siswa.xlsx', ['Username', 'Password', 'nama', 'kelas'], [
+            ['2024001', '837259*', 'Ahmad Fauzi', 'XII RPL 1'],
+            ['2024002', '258639*', 'Siti Aminah', 'XII RPL 1'],
         ]);
     }
 
@@ -111,33 +111,37 @@ class Students extends BaseController
         $tolak  = [];
 
         foreach ($rows as $n => $r) {
-            $baris = $n + 2; // +1 header, +1 basis-1
-            $nis   = $r[0] ?? '';
-            $nama  = $r[1] ?? '';
-            $kelas = strtoupper($r[2] ?? '');
-            $jk    = strtoupper(substr($r[3] ?? 'L', 0, 1)) === 'P' ? 'P' : 'L';
+            $baris   = $n + 2; // +1 header, +1 basis-1
+            $username = $r[0] ?? '';
+            $password = strtoupper($r[1] ?? '');
+            $nama     = $r[2] ?? '';
+            $kelas    = strtoupper($r[3] ?? '');
 
-            if ($nis === '' || $nama === '' || $kelas === '') {
-                $tolak[] = "Baris {$baris}: nis/nama/kelas kosong.";
+            if ($username === '' || $password === '' || $nama === '' || $kelas === '') {
+                $tolak[] = "Baris {$baris}: username/password/nama/kelas kosong.";
 
                 continue;
             }
 
-            $ada = $model->where('nis', $nis)->first();
+            $ada = $model->where('nis', $username)->first();
             if ($ada) {
-                // update data, token lama dipertahankan supaya kartu tercetak tetap sah
-                $model->update($ada['id'], ['nama' => $nama, 'kelas' => $kelas, 'jk' => $jk]);
+                $model->update($ada['id'], [
+                    'nama'  => $nama,
+                    'kelas' => $kelas,
+                    'jk'    => 'L',
+                    'token' => $password,
+                ]);
                 $ubah++;
 
                 continue;
             }
 
             $ok = $model->insert([
-                'nis'   => $nis,
+                'nis'   => $username,
                 'nama'  => $nama,
                 'kelas' => $kelas,
-                'jk'    => $jk,
-                'token' => $nis, // kebijakan: token = NIS
+                'jk'    => 'L',
+                'token' => $password,
                 'aktif' => 1,
             ]);
 

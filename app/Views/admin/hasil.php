@@ -21,7 +21,15 @@
     <?php if ($hasil === []): ?>
       <button class="btn btn-sm" disabled title="Belum ada peserta yang mengerjakan">&#11015; Export Excel</button>
     <?php else: ?>
-      <a class="btn btn-sm" href="<?= site_url('admin/ujian/export/' . $exam['id']) ?>">&#11015; Export Excel</a>
+      <form method="get" action="<?= site_url('admin/ujian/export/' . $exam['id']) ?>" class="btn-row">
+        <select name="kelas" aria-label="Pilih rombel untuk export">
+          <option value="">Semua rombel</option>
+          <?php foreach ($daftarRombel as $rombel): ?>
+            <option value="<?= esc($rombel, 'attr') ?>"><?= esc($rombel) ?></option>
+          <?php endforeach ?>
+        </select>
+        <button class="btn btn-sm" type="submit">&#11015; Export Excel</button>
+      </form>
     <?php endif ?>
   </div>
 </div>

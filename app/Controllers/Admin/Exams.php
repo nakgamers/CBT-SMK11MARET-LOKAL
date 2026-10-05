@@ -3,6 +3,7 @@
 namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
+use App\Libraries\ResultExport;
 use App\Libraries\Sheet;
 use App\Models\AnswerModel;
 use App\Models\AttemptModel;
@@ -145,9 +146,10 @@ class Exams extends BaseController
         return view('admin/hasil', [
             'title' => 'Hasil — ' . $exam['nama'],
             'exam'  => $exam,
-            'hasil' => $hasil,
-            'absen' => $absen,
-            'stat'  => [
+            'hasil'        => $hasil,
+            'absen'        => $absen,
+            'daftarRombel' => ResultExport::classes($hasil),
+            'stat'         => [
                 'selesai' => count($selesai),
                 'proses'  => count($hasil) - count($selesai),
                 'rata'    => $skor === [] ? 0 : round(array_sum($skor) / count($skor), 2),
@@ -164,8 +166,21 @@ class Exams extends BaseController
             return redirect()->to(site_url('admin/ujian'))->with('error', 'Ujian tidak ditemukan.');
         }
 
+        $semua = model(AttemptModel::class)->hasilUjian($id);
+        $kelas = trim((string) $this->request->getGet('kelas'));
+        if ($kelas !== '' && ! in_array($kelas, ResultExport::classes($semua), true)) {
+            return redirect()->to(site_url('admin/ujian/hasil/' . $id))
+                ->with('error', 'Rombel tidak ditemukan pada hasil ujian ini.');
+        }
+
+        $hasil = ResultExport::filter($semua, $kelas);
+        if ($hasil === []) {
+            return redirect()->to(site_url('admin/ujian/hasil/' . $id))
+                ->with('error', 'Belum ada hasil yang dapat diekspor untuk rombel tersebut.');
+        }
+
         $baris = [];
-        foreach (model(AttemptModel::class)->hasilUjian($id) as $i => $h) {
+        foreach ($hasil as $i => $h) {
             $baris[] = [
                 $i + 1,
                 $h['nis'],
@@ -180,9 +195,10 @@ class Exams extends BaseController
             ];
         }
 
-        $nama = preg_replace('/[^A-Za-z0-9_-]+/', '-', $exam['nama']);
+        $nama = ResultExport::slug($exam['nama']);
+        $suffix = $kelas === '' ? '' : '-' . ResultExport::slug($kelas);
         Sheet::unduhData(
-            'nilai-' . strtolower(trim($nama, '-')) . '.xlsx',
+            'nilai-' . $nama . $suffix . '.xlsx',
             ['No', 'NIS', 'Nama', 'Kelas', 'Status', 'Benar', 'Salah', 'Kosong', 'Nilai', 'Dikumpulkan'],
             $baris
         );
