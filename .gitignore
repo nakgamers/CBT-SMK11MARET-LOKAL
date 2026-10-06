@@ -43,6 +43,10 @@ $RECYCLE.BIN/
 # as it poses a security risk.
 .env
 .vagrant
+
+# Local user uploads (persisted outside Docker images)
+writable/public-uploads/*
+!writable/public-uploads/.gitkeep
 Vagrantfile
 
 #-------------------------

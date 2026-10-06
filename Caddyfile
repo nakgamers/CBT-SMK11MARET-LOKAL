@@ -1,0 +1,18 @@
+{
+    # Port 80 tetap ditangani aaPanel/Nginx.
+    auto_https disable_redirects
+
+    # Browser/curl lazimnya tidak mengirim SNI untuk alamat IP literal.
+    # Pilih sertifikat IP ini ketika ClientHello tidak membawa ServerName.
+    default_sni 172.168.11.11
+}
+
+https://172.168.11.11 {
+    tls internal
+
+    reverse_proxy cbt:8080 {
+        # Pertahankan host asli dan beritahu CI4 bahwa klien memakai HTTPS.
+        header_up Host {http.request.host}
+        header_up X-Forwarded-Proto https
+    }
+}

@@ -25,6 +25,22 @@ services:
       retries: 3
       start_period: 40s
 
+  caddy:
+    image: caddy:2-alpine
+    container_name: cbt-caddy
+    restart: unless-stopped
+    depends_on:
+      cbt:
+        condition: service_healthy
+    networks:
+      - cbt-net
+    ports:
+      - "172.168.11.11:443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
   cbt-mysql:
     image: mysql:8.0
     container_name: cbt-mysql
@@ -54,3 +70,5 @@ networks:
 
 volumes:
   cbt-mysql:
+  caddy-data:
+  caddy-config:

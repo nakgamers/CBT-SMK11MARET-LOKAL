@@ -5,6 +5,7 @@ writable/cache/*
 writable/logs/*
 writable/session/*
 writable/uploads/*
+writable/public-uploads/*
 writable/debugbar/*
 tests/
 builds/
