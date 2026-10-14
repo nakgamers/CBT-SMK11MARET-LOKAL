@@ -1,3 +1,10 @@
+<?php
+$wmText = esc((string) $siswa['nama'] . ' - ' . (string) $siswa['nis']);
+$wmSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="420" height="260" viewBox="0 0 420 260">'
+    . '<text x="40" y="155" transform="rotate(-35 210 130)" fill="#000" font-family="sans-serif" font-size="20">'
+    . $wmText
+    . '</text></svg>';
+?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -7,9 +14,72 @@
 <link rel="stylesheet" href="<?= cbt_css_url() ?>">
 <link rel="stylesheet" href="<?= base_url('assets/vendor/sweetalert2.min.css') ?>">
 <script src="<?= base_url('assets/vendor/sweetalert2.min.js') ?>"></script>
+<style>
+.connection-overlay {
+  position: fixed; inset: 0; z-index: 10002;
+  display: grid; place-items: center;
+  padding: 1.5rem;
+  background: rgba(15, 23, 42, .88);
+  color: #fff; text-align: center;
+  font-size: clamp(1.2rem, 4vw, 2rem); font-weight: 700;
+}
+.connection-overlay[hidden] { display: none; }
+.fullscreen-start {
+  position: fixed; inset: 0; z-index: 10001;
+  display: grid; place-items: center; padding: 1.5rem;
+  background: rgba(15, 23, 42, .96); color: #fff; text-align: center;
+}
+.fullscreen-start[hidden] { display: none; }
+.fullscreen-start-card {
+  max-width: 28rem; padding: 1.5rem; border-radius: .8rem;
+  background: #fff; color: #0f172a; box-shadow: 0 12px 32px rgba(0, 0, 0, .3);
+}
+.fullscreen-start-card button {
+  border: 0; border-radius: .5rem; padding: .7rem 1rem;
+  background: #2563eb; color: #fff; cursor: pointer; font: inherit; font-weight: 700;
+}
+.fullscreen-reminder {
+  position: fixed; left: 50%; bottom: max(1rem, env(safe-area-inset-bottom));
+  z-index: 10001; display: flex; align-items: center; gap: .75rem;
+  max-width: calc(100vw - 2rem); transform: translateX(-50%);
+  padding: .65rem .8rem .65rem 1rem; border-radius: .65rem;
+  background: #fff7ed; color: #9a3412; box-shadow: 0 8px 24px rgba(15, 23, 42, .2);
+  font-size: .9rem; font-weight: 600;
+}
+.fullscreen-reminder[hidden] { display: none; }
+.fullscreen-reminder button {
+  border: 0; border-radius: .45rem; padding: .45rem .7rem;
+  background: #ea580c; color: #fff; cursor: pointer; font: inherit; white-space: nowrap;
+}
+.wm-tiled {
+  position: fixed; inset: 0; z-index: 9999;
+  pointer-events: none; user-select: none;
+  opacity: 0.06;
+  background-repeat: repeat;
+  background-image: url("data:image/svg+xml,<?= rawurlencode($wmSvg) ?>");
+}
+.exam-content { position: relative; z-index: 2; }
+</style>
 </head>
 <body>
-
+<div id="connectionOverlay" class="connection-overlay" role="alert" aria-live="assertive" hidden>
+  Koneksi terputus — menunggu koneksi kembali...
+</div>
+<?php if ((int) $sisa > 0): ?>
+<div id="fullscreenStart" class="fullscreen-start" role="dialog" aria-modal="true" aria-labelledby="fullscreenStartTitle">
+  <div class="fullscreen-start-card">
+    <h2 id="fullscreenStartTitle">Mulai ujian</h2>
+    <p>Masuk fullscreen agar pengerjaan lebih fokus.</p>
+    <button type="button" onclick="mulaiUjianFullscreen()">Mulai Ujian</button>
+  </div>
+</div>
+<?php endif ?>
+<div id="fullscreenReminder" class="fullscreen-reminder" role="status" aria-live="polite" hidden>
+  <span>Mode fullscreen keluar — klik untuk kembali</span>
+  <button type="button" onclick="masukFullscreen()">Kembali fullscreen</button>
+</div>
+<div class="wm-tiled" aria-hidden="true"></div>
+<div class="exam-content">
 <div class="exam-bar">
   <div class="nm">
     <b><?= esc($exam['nama']) ?></b>
@@ -115,11 +185,13 @@
 <form id="fSubmit" method="post" action="<?= site_url('siswa/selesai/' . $exam['id']) ?>" class="hidden">
   <?= csrf_field() ?>
 </form>
+</div>
 
 <script>
 const URL_JAWAB = <?= json_encode(site_url('siswa/jawab/' . $exam['id'])) ?>;
 const URL_PELANGGARAN = <?= json_encode(site_url('siswa/pelanggaran/' . $exam['id'])) ?>;
 const URL_GANGGUAN_KONEKSI = <?= json_encode(site_url('siswa/gangguan-koneksi/' . $exam['id'])) ?>;
+const URL_PAUSE_TIMER = <?= json_encode(site_url('siswa/pause-timer/' . $exam['id'])) ?>;
 const URL_LOGIN = <?= json_encode(site_url('login')) ?>;
 const CSRF = { name: <?= json_encode(csrf_token()) ?>, hash: <?= json_encode(csrf_hash()) ?> };
 const TOTAL = <?= count($soal) ?>;
@@ -128,14 +200,85 @@ let cur = 0;
 let antiCheatMengirim = false;
 let gangguanMengirim = false;
 let koneksiTerputus = false;
-let gangguanPending = Number(sessionStorage.getItem('cbt_gangguan_pending') || 0);
+// Page-load/refresh bukan gangguan koneksi.
+sessionStorage.removeItem('cbt_gangguan_pending');
+let gangguanPending = 0;
 let submitDisengaja = false;
+let heartbeatKoneksi = null;
+let sinkronisasiKoneksi = false;
+let fullscreenGestureDone = false;
+let fullscreenPernahAktif = false;
+const unloadMarker = Number(sessionStorage.getItem('cbt_page_unloading') || 0);
+sessionStorage.removeItem('cbt_page_unloading');
+let halamanAkanUnload = unloadMarker > 0 && Date.now() - unloadMarker < 10000;
+let antiCheatTimer = null;
 
 const pages = [...document.querySelectorAll('.q-page')];
 const navBtn = [...document.querySelectorAll('#navGrid button')];
 const elTimer = document.getElementById('timer');
 const elCnt = document.getElementById('cnt');
 const elSave = document.getElementById('saveState');
+const fullscreenReminder = document.getElementById('fullscreenReminder');
+
+function masukFullscreen() {
+  const root = document.documentElement;
+  const request = root.requestFullscreen || root.webkitRequestFullscreen ||
+    root.mozRequestFullScreen || root.msRequestFullscreen;
+  if (!request) return;
+  try {
+    const result = request.call(root);
+    if (result && typeof result.catch === 'function') result.catch(() => {});
+  } catch (error) {
+    // Fullscreen opsional; penolakan browser tidak boleh mengganggu ujian.
+  }
+}
+
+function fullscreenSedangAktif() {
+  return Boolean(document.fullscreenElement || document.webkitFullscreenElement ||
+    document.mozFullScreenElement || document.msFullscreenElement);
+}
+
+function perbaruiPengingatFullscreen() {
+  const tampil = fullscreenPernahAktif && !fullscreenSedangAktif() &&
+    !submitDisengaja && sisa > 0 && !koneksiTerputus;
+  fullscreenReminder.hidden = !tampil;
+}
+
+function tangkapGesturPertama() {
+  if (fullscreenGestureDone) return;
+  fullscreenGestureDone = true;
+  hapusListenerGesturFullscreen();
+  masukFullscreen();
+  const start = document.getElementById('fullscreenStart');
+  if (start) start.hidden = true;
+}
+
+function hapusListenerGesturFullscreen() {
+  document.removeEventListener('click', tangkapGesturPertama);
+  document.removeEventListener('keydown', tangkapGesturPertama);
+  document.removeEventListener('touchstart', tangkapGesturPertama);
+}
+
+function mulaiUjianFullscreen() {
+  fullscreenGestureDone = true;
+  hapusListenerGesturFullscreen();
+  masukFullscreen();
+  document.getElementById('fullscreenStart').hidden = true;
+}
+
+document.addEventListener('click', tangkapGesturPertama);
+document.addEventListener('keydown', tangkapGesturPertama);
+document.addEventListener('touchstart', tangkapGesturPertama, { passive: true });
+
+function tanganiPerubahanFullscreen() {
+  if (fullscreenSedangAktif()) fullscreenPernahAktif = true;
+  perbaruiPengingatFullscreen();
+}
+
+document.addEventListener('fullscreenchange', tanganiPerubahanFullscreen);
+document.addEventListener('webkitfullscreenchange', tanganiPerubahanFullscreen);
+document.addEventListener('mozfullscreenchange', tanganiPerubahanFullscreen);
+document.addEventListener('MSFullscreenChange', tanganiPerubahanFullscreen);
 
 function ke(i) {
   if (i < 0 || i >= TOTAL) return;
@@ -163,8 +306,13 @@ pages.forEach(p => {
 
 /* ---- timer: hitung dari sisa detik milik server, bukan jam lokal ---- */
 function tick() {
+  if (koneksiTerputus) {
+    setTimeout(tick, 1000);
+    return;
+  }
   if (sisa <= 0) {
     elTimer.textContent = '00:00';
+    fullscreenReminder.hidden = true;
     Swal.fire({
       icon: 'warning',
       title: 'Waktu ujian habis',
@@ -291,17 +439,32 @@ async function laporPelanggaran() {
 /* Tab berpindah/ditutup: visibilitychange lebih terukur daripada blur, yang bisa terpicu
  * oleh klik dialog browser, keyboard virtual, atau elemen UI lain. */
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') laporPelanggaran();
+  if (document.visibilityState === 'hidden') {
+    clearTimeout(antiCheatTimer);
+    antiCheatTimer = setTimeout(() => {
+      antiCheatTimer = null;
+      if (!halamanAkanUnload && document.visibilityState === 'hidden') laporPelanggaran();
+    }, 1000);
+  } else {
+    clearTimeout(antiCheatTimer);
+    antiCheatTimer = null;
+    halamanAkanUnload = false;
+  }
 });
 
 function antreGangguanKoneksi() {
-  gangguanPending++;
-  sessionStorage.setItem('cbt_gangguan_pending', String(gangguanPending));
+  if (gangguanPending > 0) return;
+  gangguanPending = 1;
+  sessionStorage.setItem('cbt_gangguan_pending', '1');
+  if (!sessionStorage.getItem('cbt_offline_since')) {
+    sessionStorage.setItem('cbt_offline_since', String(Date.now()));
+  }
 }
 
 async function kirimGangguanKeServer() {
   if (gangguanMengirim || submitDisengaja || !navigator.onLine) return;
   gangguanMengirim = true;
+  let heartbeatBerhasil = false;
   try {
     while (gangguanPending > 0 && !submitDisengaja) {
       const body = new FormData();
@@ -313,23 +476,14 @@ async function kirimGangguanKeServer() {
         keepalive: true,
       });
       const hasil = await response.json().catch(() => ({}));
-      if (hasil.dihentikan || hasil.login === false) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Ujian dihentikan',
-          text: hasil.dihentikan
-            ? 'Koneksi terputus 5 kali. Ujian dinyatakan selesai dan Anda akan keluar dari sistem.'
-            : 'Sesi Anda sudah berakhir.',
-          confirmButtonText: 'Kembali ke login',
-          allowOutsideClick: false,
-          allowEscapeKey: false,
-        }).then(() => window.location.replace(hasil.redirect || URL_LOGIN));
-        return;
-      }
       if (!response.ok || !hasil.gangguan) throw new Error('Gagal mencatat gangguan koneksi');
       gangguanPending--;
+      heartbeatBerhasil = true;
       sessionStorage.setItem('cbt_gangguan_pending', String(gangguanPending));
       status('gangguan koneksi ' + hasil.gangguan + '/5', 'bad');
+    }
+    if (koneksiTerputus && heartbeatBerhasil && gangguanPending === 0) {
+      sembunyikanOverlayKoneksi();
     }
   } catch (error) {
     status('koneksi terputus — menunggu koneksi kembali', 'bad');
@@ -345,20 +499,82 @@ function laporGangguanKoneksi() {
   kirimGangguanKeServer();
 }
 
+function mulaiHeartbeatKoneksi() {
+  if (heartbeatKoneksi !== null) return;
+  heartbeatKoneksi = setInterval(() => {
+    if (!koneksiTerputus || submitDisengaja) return;
+    antreGangguanKoneksi();
+    kirimGangguanKeServer();
+  }, 3000);
+}
+
+function hentikanHeartbeatKoneksi() {
+  if (heartbeatKoneksi === null) return;
+  clearInterval(heartbeatKoneksi);
+  heartbeatKoneksi = null;
+}
+
+function tampilkanOverlayKoneksi() {
+  koneksiTerputus = true;
+  fullscreenReminder.hidden = true;
+  if (!sessionStorage.getItem('cbt_offline_since')) {
+    sessionStorage.setItem('cbt_offline_since', String(Date.now()));
+  }
+  document.getElementById('connectionOverlay').hidden = false;
+  mulaiHeartbeatKoneksi();
+}
+
+async function sembunyikanOverlayKoneksi() {
+  if (sinkronisasiKoneksi) return;
+  sinkronisasiKoneksi = true;
+  if (koneksiTerputus && sessionStorage.getItem('cbt_offline_since')) {
+    const mulaiPutus = Number(sessionStorage.getItem('cbt_offline_since'));
+    const body = new FormData();
+    body.append(CSRF.name, CSRF.hash);
+    body.append('pause_seconds', String(Math.max(0, Math.floor((Date.now() - mulaiPutus) / 1000))));
+    try {
+      const response = await fetch(URL_PAUSE_TIMER, {
+        method: 'POST', body,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        credentials: 'same-origin',
+      });
+      const hasil = await response.json().catch(() => ({}));
+      if (!response.ok || typeof hasil.sisa !== 'number') throw new Error('Gagal sinkronisasi waktu');
+      sisa = hasil.sisa;
+      sessionStorage.removeItem('cbt_offline_since');
+      gangguanPending = 0;
+      sessionStorage.removeItem('cbt_gangguan_pending');
+      hentikanHeartbeatKoneksi();
+    } catch (error) {
+      sinkronisasiKoneksi = false;
+      status('gagal menyinkronkan — mencoba kembali…', 'bad');
+      return;
+    }
+  }
+  sinkronisasiKoneksi = false;
+  koneksiTerputus = false;
+  document.getElementById('connectionOverlay').hidden = true;
+  perbaruiPengingatFullscreen();
+  status('koneksi kembali — jawaban tersimpan', 'ok');
+}
+
 function tampilkanHasilAutosaveGagal() {
+  tampilkanOverlayKoneksi();
   laporGangguanKoneksi();
 }
 
 window.addEventListener('offline', () => {
-  koneksiTerputus = true;
+  tampilkanOverlayKoneksi();
   laporGangguanKoneksi();
 });
 window.addEventListener('online', () => {
-  koneksiTerputus = false;
-  status('koneksi kembali — menyinkronkan…', 'ok');
-  kirimGangguanKeServer();
+  if (gangguanPending > 0) {
+    kirimGangguanKeServer();
+    return;
+  }
+  sembunyikanOverlayKoneksi();
 });
-if (gangguanPending > 0 && navigator.onLine) kirimGangguanKeServer();
+if (!navigator.onLine) tampilkanOverlayKoneksi();
 
 /* pilih opsi */
 document.addEventListener('change', e => {
@@ -396,6 +612,17 @@ function kumpul() {
     ? 'Masih ada <b>' + belum + ' soal</b> yang belum dijawab.'
     : 'Semua soal sudah dijawab.';
 
+  if (typeof Swal === 'undefined') {
+    const pesan = (adaYangKosong ? 'Masih ada ' + belum + ' soal belum dijawab!\n\n' : '') +
+      'Kumpulkan jawaban sekarang?\nSetelah dikumpulkan, jawaban tidak dapat diubah lagi.';
+    if (confirm(pesan)) {
+      submitDisengaja = true;
+      fullscreenReminder.hidden = true;
+      document.getElementById('fSubmit').submit();
+    }
+    return;
+  }
+
   Swal.fire({
     icon: adaYangKosong ? 'warning' : 'question',
     title: 'Kumpulkan jawaban?',
@@ -409,6 +636,7 @@ function kumpul() {
   }).then(result => {
     if (result.isConfirmed) {
       submitDisengaja = true;
+      fullscreenReminder.hidden = true;
       document.getElementById('fSubmit').submit();
     }
   });
@@ -416,6 +644,10 @@ function kumpul() {
 
 /* keyboard: 1-5 pilih opsi, panah pindah soal */
 document.addEventListener('keydown', e => {
+  if (koneksiTerputus) {
+    e.preventDefault();
+    return;
+  }
   if (e.target.matches('input,textarea')) return;
   if (e.key === 'ArrowRight') ke(cur + 1);
   if (e.key === 'ArrowLeft') ke(cur - 1);
@@ -426,7 +658,19 @@ document.addEventListener('keydown', e => {
   }
 });
 
-window.addEventListener('beforeunload', e => { e.preventDefault(); e.returnValue = ''; });
+window.addEventListener('beforeunload', e => {
+  halamanAkanUnload = true;
+  sessionStorage.setItem('cbt_page_unloading', String(Date.now()));
+  clearTimeout(antiCheatTimer);
+  if (submitDisengaja) return;
+  e.preventDefault();
+  e.returnValue = '';
+});
+window.addEventListener('pagehide', () => {
+  halamanAkanUnload = true;
+  sessionStorage.setItem('cbt_page_unloading', String(Date.now()));
+  clearTimeout(antiCheatTimer);
+});
 
 /* ---- lightbox gambar soal ---- */
 function lihatGambar(img) {

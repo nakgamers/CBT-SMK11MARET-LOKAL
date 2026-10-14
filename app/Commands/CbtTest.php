@@ -502,7 +502,7 @@ class CbtTest extends BaseCommand
         }
     }
 
-    /** Verifikasi lima gangguan koneksi: jawaban tetap ada hingga attempt selesai. */
+    /** Verifikasi gangguan koneksi tetap tercatat tanpa menghentikan attempt. */
     private function ujiGangguanKoneksi(int $examId, int $questionId): void
     {
         $db = db_connect();
@@ -521,15 +521,13 @@ class CbtTest extends BaseCommand
             $answers = model(AnswerModel::class);
             $attempts = model(AttemptModel::class);
             $answers->simpan($attemptId, $questionId, 'A');
-            for ($i = 1; $i <= 4; $i++) {
+            for ($i = 1; $i <= 5; $i++) {
                 $hasil = $attempts->catatGangguanKoneksi($attemptId);
-                $this->ok($hasil !== null && $hasil['gangguan'] === $i && ! $hasil['dihentikan'], "Gangguan koneksi {$i}/5 tercatat");
+                $this->ok($hasil !== null && $hasil['gangguan'] === $i && ! $hasil['dihentikan'], "Gangguan koneksi {$i}/5 tercatat tanpa menghentikan ujian");
             }
-            $this->ok($answers->petaAttempt($attemptId) !== [], 'Gangguan koneksi tidak menghapus jawaban tersimpan');
-            $hasil = $attempts->catatGangguanKoneksi($attemptId);
             $final = $attempts->find($attemptId);
-            $this->ok($hasil !== null && $hasil['gangguan'] === 5 && $hasil['dihentikan'], 'Gangguan koneksi kelima menghentikan ujian');
-            $this->ok($final['status'] === 'selesai', 'Gangguan koneksi kelima memfinalisasi attempt');
+            $this->ok($answers->petaAttempt($attemptId) !== [], 'Gangguan koneksi tidak menghapus jawaban tersimpan');
+            $this->ok($final['status'] === 'berlangsung', 'Gangguan koneksi kelima tidak memfinalisasi attempt');
         } finally {
             if ($attemptId) {
                 $db->table('answers')->where('attempt_id', $attemptId)->delete();

@@ -126,6 +126,9 @@ class Exams extends BaseController
 
     public function hasil(int $id)
     {
+        $attemptModel = new \App\Models\AttemptModel();
+        $difinalisasi = $attemptModel->finalisasiKedaluwarsa((int) $id);
+
         $exam = model(ExamModel::class)->withBank($id);
         if (! $exam) {
             return redirect()->to(site_url('admin/ujian'))->with('error', 'Ujian tidak ditemukan.');
@@ -146,6 +149,7 @@ class Exams extends BaseController
         return view('admin/hasil', [
             'title' => 'Hasil — ' . $exam['nama'],
             'exam'  => $exam,
+            'difinalisasi' => $difinalisasi,
             'hasil'        => $hasil,
             'absen'        => $absen,
             'daftarRombel' => ResultExport::classes($hasil),
@@ -324,9 +328,25 @@ class Exams extends BaseController
     /** Hapus attempt agar siswa bisa mengulang (mis. listrik mati saat ujian). */
     public function resetAttempt(int $examId)
     {
-        $studentId = (int) $this->request->getPost('student_id');
-        model(AttemptModel::class)->where('exam_id', $examId)->where('student_id', $studentId)->delete();
+        $ids = $this->request->getPost('student_id');
+        $ids = is_array($ids) ? array_map('intval', $ids) : [(int) $ids];
+        $ids = array_values(array_filter($ids));
+        if ($ids === []) {
+            return redirect()->back()->with('error', 'Pilih dulu siswa yang mau direset.');
+        }
 
-        return redirect()->back()->with('success', 'Attempt direset, siswa dapat mengerjakan ulang.');
+        model(AttemptModel::class)->where('exam_id', $examId)->whereIn('student_id', $ids)->delete();
+        $n = count($ids);
+
+        return redirect()->back()->with('success', "{$n} attempt direset, siswa dapat mengerjakan ulang.");
+    }
+
+    /** Hapus SEMUA attempt pada ujian ini agar seluruh peserta mengulang. */
+    public function resetAllAttempts(int $examId)
+    {
+        $deleted = model(AttemptModel::class)->where('exam_id', $examId)->countAllResults(false);
+        model(AttemptModel::class)->where('exam_id', $examId)->delete();
+
+        return redirect()->back()->with('success', "Semua attempt ({$deleted} peserta) direset.");
     }
 }

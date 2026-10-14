@@ -159,6 +159,52 @@ class Exam extends BaseController
         ]);
     }
 
+    /** Tambahkan waktu koneksi terputus ke deadline, tanpa mengubah jawaban atau anti-cheat. */
+    public function pauseTimer(int $examId)
+    {
+        $siswa = $this->siswa();
+        if (! $siswa) {
+            return $this->response->setStatusCode(401)->setJSON([
+                'ok' => false, 'login' => false, 'error' => 'Sesi tidak valid.',
+            ]);
+        }
+
+        $attemptModel = model(AttemptModel::class);
+        $attempt = $attemptModel->findAktif($examId, (int) $siswa['id']);
+        if (! $attempt || $attempt['status'] !== 'berlangsung') {
+            return $this->response->setStatusCode(409)->setJSON([
+                'ok' => false, 'error' => 'Ujian sudah ditutup.',
+            ]);
+        }
+
+        $pauseSeconds = filter_var($this->request->getPost('pause_seconds'), FILTER_VALIDATE_INT);
+        if ($pauseSeconds === false || $pauseSeconds < 0 || $pauseSeconds > 86400) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'ok' => false, 'error' => 'Durasi gangguan tidak valid.',
+            ]);
+        }
+
+        $deadline = strtotime((string) $attempt['deadline_at']);
+        if (time() >= $deadline) {
+            $attemptModel->finalisasi((int) $attempt['id']);
+            return $this->response->setStatusCode(409)->setJSON([
+                'ok' => false, 'habis' => true, 'error' => 'Waktu ujian habis.',
+            ]);
+        }
+
+        if ($pauseSeconds > 0) {
+            $deadline += $pauseSeconds;
+            $attemptModel->update((int) $attempt['id'], [
+                'deadline_at' => date('Y-m-d H:i:s', $deadline),
+            ]);
+        }
+
+        return $this->response->setJSON([
+            'ok' => true,
+            'sisa' => max(0, $deadline - time()),
+        ]);
+    }
+
     /** Catat perpindahan tab/jendela dan reset jawaban sesuai kebijakan anti-cheat. */
     public function pelanggaran(int $examId)
     {
@@ -230,16 +276,12 @@ class Exam extends BaseController
 
         $gangguan = (int) $hasil['gangguan'];
         $dihentikan = (bool) $hasil['dihentikan'];
-        if ($dihentikan) {
-            session()->destroy();
-        }
 
         return $this->response->setJSON([
             'ok' => true,
             'gangguan' => $gangguan,
             'maksimal' => 5,
             'dihentikan' => $dihentikan,
-            'redirect' => $dihentikan ? site_url('login') : null,
         ]);
     }
 

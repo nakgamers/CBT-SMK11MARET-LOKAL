@@ -310,6 +310,9 @@ table.tbl th {
 }
 table.tbl tbody tr:hover { background: #fafbff; }
 table.tbl tbody tr:last-child td { border-bottom: 0; }
+table.tbl th.sortable { cursor: pointer; user-select: none; }
+table.tbl th.sortable:hover { color: var(--ink); }
+table.tbl th.sortable .sort-ind { font-size: .7rem; margin-left: .25rem; color: var(--ok); }
 table.tbl td.act, table.tbl th.act { white-space: nowrap; text-align: right; padding-right: 1rem; }
 .sr-only {
   position: absolute; width: 1px; height: 1px; overflow: hidden;

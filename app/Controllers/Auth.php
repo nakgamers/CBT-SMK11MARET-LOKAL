@@ -21,13 +21,13 @@ class Auth extends BaseController
 
     public function attempt()
     {
-        $nis   = trim((string) $this->request->getPost('nis'));
+        $nis   = trim((string) ($this->request->getPost('nis') ?? $this->request->getPost('username')));
         // token = NIS (berisi titik, mis. 24.7411): buang spasi & samakan huruf besar,
         // tapi JANGAN hapus tanda baca lain — titik adalah bagian sah NIS.
         $token = strtoupper(str_replace(' ', '', trim((string) $this->request->getPost('token'))));
 
         if ($nis === '' || $token === '') {
-            return redirect()->back()->with('error', 'NIS dan token wajib diisi.')->withInput();
+            return redirect()->back()->with('error', 'Username dan password wajib diisi.')->withInput();
         }
 
         $siswa = model(StudentModel::class)->findByCard($nis, $token);
@@ -45,7 +45,7 @@ class Auth extends BaseController
 
         if (! $siswa) {
             // pesan digabung: jangan bocorkan NIS mana yang valid
-            return redirect()->back()->with('error', 'NIS atau password salah, atau akun dinonaktifkan.')->withInput();
+            return redirect()->back()->with('error', 'Username atau password salah, atau akun dinonaktifkan.')->withInput();
         }
 
         session()->regenerate();

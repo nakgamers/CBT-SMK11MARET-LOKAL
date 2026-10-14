@@ -13,6 +13,7 @@ class StudentModel extends Model
     protected $allowedFields = ['nis', 'nama', 'kelas', 'jk', 'token', 'aktif'];
 
     protected $validationRules = [
+        'id'    => 'permit_empty|is_natural_no_zero',
         'nis'   => 'required|max_length[30]|is_unique[students.nis,id,{id}]',
         'nama'  => 'required|max_length[100]',
         'kelas' => 'required|max_length[30]',

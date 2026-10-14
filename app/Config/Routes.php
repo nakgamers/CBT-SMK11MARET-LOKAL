@@ -21,6 +21,7 @@ $routes->group('siswa', ['filter' => 'studentAuth'], static function ($routes): 
     $routes->post('jawab/(:num)', 'Exam::jawab/$1');       // AJAX autosave
     $routes->post('pelanggaran/(:num)', 'Exam::pelanggaran/$1'); // anti-cheat visibility
     $routes->post('gangguan-koneksi/(:num)', 'Exam::gangguanKoneksi/$1'); // koneksi
+    $routes->post('pause-timer/(:num)', 'Exam::pauseTimer/$1'); // kompensasi waktu koneksi terputus
     $routes->post('selesai/(:num)', 'Exam::selesai/$1');
     $routes->get('hasil/(:num)', 'Exam::hasil/$1');
 
@@ -41,6 +42,8 @@ $routes->group('admin', ['filter' => 'adminAuth'], static function ($routes): vo
     // siswa
     $routes->get('siswa', 'Admin\Students::index');
     $routes->post('siswa/simpan', 'Admin\Students::simpan');
+    $routes->put('siswa/simpan', 'Admin\Students::simpan');
+    $routes->patch('siswa/simpan', 'Admin\Students::simpan');
     $routes->post('siswa/hapus/(:num)', 'Admin\Students::hapus/$1');
     $routes->post('siswa/import', 'Admin\Students::import');
     $routes->get('siswa/template', 'Admin\Students::template');
@@ -68,7 +71,8 @@ $routes->group('admin', ['filter' => 'adminAuth'], static function ($routes): vo
     $routes->get('ujian/analisis/(:num)', 'Admin\Exams::analisis/$1');
     $routes->get('ujian/jawaban/(:num)/(:num)', 'Admin\Exams::jawaban/$1/$2');
     $routes->get('ujian/export/(:num)', 'Admin\Exams::export/$1');
-    $routes->post('ujian/reset/(:num)', 'Admin\Exams::resetAttempt/$1');
+    $routes->post('ujian/reset/(:num)', 'Admin\\Exams::resetAttempt/$1');
+    $routes->post('ujian/reset-all/(:num)', 'Admin\\Exams::resetAllAttempts/$1');
 
     // absen selfie
     $routes->get('absen', 'Admin\Selfie::index');

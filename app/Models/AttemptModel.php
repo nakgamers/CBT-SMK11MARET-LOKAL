@@ -94,8 +94,7 @@ class AttemptModel extends Model
     }
 
     /**
-     * Catat gangguan koneksi tanpa menghapus jawaban yang sudah tersimpan.
-     * Pada gangguan kelima attempt langsung difinalisasi.
+     * Catat gangguan koneksi tanpa menghapus jawaban atau menghentikan attempt.
      *
      * @return array{attempt: array, gangguan: int, dihentikan: bool}|null
      */
@@ -118,10 +117,8 @@ class AttemptModel extends Model
             'gangguan_koneksi_terakhir_at' => date('Y-m-d H:i:s'),
         ]);
 
-        $dihentikan = $gangguan >= 5;
-        if ($dihentikan) {
-            $this->finalisasi($attemptId);
-        }
+        // Gangguan koneksi hanya telemetry; tidak pernah memfinalisasi attempt.
+        $dihentikan = false;
 
         $this->db->transComplete();
 
@@ -201,5 +198,25 @@ class AttemptModel extends Model
         ]);
 
         return $this->find($attemptId);
+    }
+
+    public function finalisasiKedaluwarsa(int $examId): int
+    {
+        $now  = date('Y-m-d H:i:s');
+        $rows = $this->where('exam_id', $examId)
+            ->where('status', 'berlangsung')
+            ->where('deadline_at <=', $now)
+            ->findAll();
+
+        $n = 0;
+        foreach ($rows as $r) {
+            $id = is_array($r) ? ($r['id'] ?? null) : ($r->id ?? null);
+            if ($id) {
+                $this->finalisasi((int) $id);
+                $n++;
+            }
+        }
+
+        return $n;
     }
 }

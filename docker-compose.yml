@@ -8,7 +8,9 @@ services:
       cbt-mysql:
         condition: service_healthy
     networks:
-      - cbt-net
+      cbt-net:
+        aliases:
+          - cbt
     ports:
       - "127.0.0.1:8086:8080"
     environment:
@@ -63,6 +65,19 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: cbt-tunnel
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./.cloudflared:/home/nonroot/.cloudflared
+      - ./.cloudflared:/etc/cloudflared
+    command: tunnel --no-autoupdate run cbt-smk11
+    depends_on:
+      cbt:
+        condition: service_healthy
 
 networks:
   cbt-net:
