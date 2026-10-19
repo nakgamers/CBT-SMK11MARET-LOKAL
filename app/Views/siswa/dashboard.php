@@ -4,6 +4,11 @@
 
 <h1>Daftar Ujian</h1>
 <p class="muted">Kelas <?= esc($siswa['kelas']) ?> &middot; <?= count($exams) ?> ujian terdaftar</p>
+<p class="muted small"><?= (int) $progres['selesai'] ?> dari <?= (int) $progres['total'] ?> ujian selesai</p>
+<style>
+.exam-card-active { border-color: #60a5fa; box-shadow: 0 0 0 2px rgba(37, 99, 235, .12); }
+.btn-active { background: #2563eb; color: #fff; }
+</style>
 
 <?php if ($exams === []): ?>
   <div class="card"><div class="empty">
@@ -17,7 +22,7 @@
     $att = $e['attempt'];
     $sudahSelesai = $att && $att['status'] === 'selesai';
 ?>
-  <div class="exam-card">
+  <div class="exam-card<?= $e['kelompok'] === 0 ? ' exam-card-active' : '' ?>">
     <div class="info">
       <h3><?= esc($e['nama']) ?></h3>
       <div class="muted small"><?= esc($e['bank_mapel'] ?? '-') ?><?= $e['bank_nama'] ? ' — ' . esc($e['bank_nama']) : '' ?></div>
@@ -43,8 +48,8 @@
           <span class="small dim">Nilai diumumkan pengawas</span>
         <?php endif ?>
       <?php elseif ($st === 'berlangsung'): ?>
-        <a class="btn" href="<?= site_url('siswa/ujian/' . $e['id']) ?>">
-          <?= $att ? 'Lanjutkan' : 'Mulai' ?> &rarr;
+        <a class="btn<?= $e['kelompok'] === 0 ? ' btn-active' : '' ?>" href="<?= site_url('siswa/ujian/' . $e['id']) ?>">
+        <?= $e['kelompok'] === 0 ? 'Masuk Ujian' : ($att ? 'Lanjutkan' : 'Mulai') ?> &rarr;
         </a>
       <?php elseif ($st === 'belum'): ?>
         <button class="btn" disabled>Belum dibuka</button>
